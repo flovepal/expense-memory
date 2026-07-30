@@ -16,6 +16,17 @@ export type FoodLogEntryFilters = {
   dishCategoryId?: string
 }
 
+export type EnsureFoodLogEntryInput = {
+  dish_id: string
+  food_name: string
+  shop?: string | null
+  price?: number | null
+  currency_id?: string | null
+  dish_category_id?: string | null
+  image_storage_path?: string | null
+  occurred_at?: string
+}
+
 export class FoodLogRepository {
   /** For browsing "what to eat where" — filter by shop or dish category. */
   async list(filters: FoodLogEntryFilters = {}): Promise<FoodLogEntry[]> {
@@ -49,6 +60,46 @@ export class FoodLogRepository {
         .from("food_log_entries")
         .update({ deleted_at: new Date().toISOString() })
         .eq("id", id)
+        .select()
+        .single()
+    )
+  }
+
+  async getByDishId(dishId: string): Promise<FoodLogEntry | null> {
+    const rows = await unwrap<FoodLogEntry[]>(
+      supabase.from("food_log_entries").select("*").eq("dish_id", dishId).is("deleted_at", null).limit(1)
+    )
+    return rows[0] ?? null
+  }
+
+  /**
+   * A dish now gets logged the moment it's bought, not just when the taste
+   * questionnaire is filled in — so it always shows up in the Food Log tab.
+   * Returns the existing entry untouched if this dish already has one
+   * (never overwrites taste data on a repeat purchase); otherwise creates a
+   * bare, unrated placeholder (overall_rating 0, would_order_again null)
+   * that the user fills in later from the list.
+   */
+  async ensureForDish(input: EnsureFoodLogEntryInput): Promise<FoodLogEntry> {
+    const existing = await this.getByDishId(input.dish_id)
+    if (existing) return existing
+    return unwrap(
+      supabase
+        .from("food_log_entries")
+        .insert({
+          dish_id: input.dish_id,
+          food_name: input.food_name,
+          shop: input.shop ?? null,
+          price: input.price ?? null,
+          currency_id: input.currency_id ?? null,
+          dish_category_id: input.dish_category_id ?? null,
+          image_storage_path: input.image_storage_path ?? null,
+          occurred_at: input.occurred_at ?? new Date().toISOString(),
+          overall_rating: 0,
+          flavors: [],
+          texture: [],
+          would_order_again: null,
+        })
         .select()
         .single()
     )

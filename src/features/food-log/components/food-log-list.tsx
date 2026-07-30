@@ -40,6 +40,9 @@ import { toast } from "@/lib/toast"
 import type { FoodLogEntry } from "@/services/repositories/food-log.repository"
 
 function StarDisplay({ rating }: { rating: number }) {
+  if (rating === 0) {
+    return <Badge variant="outline" className="text-[10px]">Not rated yet</Badge>
+  }
   return (
     <div className="flex gap-0.5">
       {[1, 2, 3, 4, 5].map((n) => (
@@ -49,6 +52,15 @@ function StarDisplay({ rating }: { rating: number }) {
         />
       ))}
     </div>
+  )
+}
+
+function OrderAgainBadge({ value, className }: { value: string | null; className?: string }) {
+  if (!value) return null
+  return (
+    <Badge variant="secondary" className={className}>
+      {WOULD_ORDER_AGAIN_LABELS[value as WouldOrderAgain]}
+    </Badge>
   )
 }
 
@@ -182,9 +194,7 @@ export function FoodLogList({ entries }: { entries: FoodLogEntry[] }) {
 
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
               <FlavorTextureBadges entry={entry} />
-              <Badge variant="secondary" className="text-[10px]">
-                {WOULD_ORDER_AGAIN_LABELS[entry.would_order_again as WouldOrderAgain]}
-              </Badge>
+              <OrderAgainBadge value={entry.would_order_again} className="text-[10px]" />
             </div>
 
             {entry.notes && (
@@ -245,9 +255,7 @@ export function FoodLogList({ entries }: { entries: FoodLogEntry[] }) {
                   <FlavorTextureBadges entry={entry} />
                 </TableCell>
                 <TableCell>
-                  <Badge variant="secondary">
-                    {WOULD_ORDER_AGAIN_LABELS[entry.would_order_again as WouldOrderAgain]}
-                  </Badge>
+                  <OrderAgainBadge value={entry.would_order_again} />
                 </TableCell>
                 <TableCell>
                   <RowActions entry={entry} />

@@ -2,6 +2,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import {
   foodLogRepository,
+  type EnsureFoodLogEntryInput,
+  type FoodLogEntry,
   type FoodLogEntryCreateInput,
   type FoodLogEntryFilters,
   type FoodLogEntryUpdateInput,
@@ -42,6 +44,16 @@ export function useUpdateFoodLogEntry() {
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: FoodLogEntryUpdateInput }) =>
       foodLogRepository.update(id, input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: foodLogKeys.lists() }),
+  })
+}
+
+/** Called right after a Food transaction saves its dish cart — one entry per dish, created only if it doesn't already have one. */
+export function useEnsureFoodLogEntriesForDishes() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (items: EnsureFoodLogEntryInput[]): Promise<FoodLogEntry[]> =>
+      Promise.all(items.map((item) => foodLogRepository.ensureForDish(item))),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: foodLogKeys.lists() }),
   })
 }

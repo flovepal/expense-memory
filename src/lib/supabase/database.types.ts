@@ -234,7 +234,7 @@ export type Database = {
           transaction_id: string | null
           updated_at: string
           user_id: string
-          would_order_again: string
+          would_order_again: string | null
         }
         Insert: {
           created_at?: string
@@ -248,14 +248,14 @@ export type Database = {
           image_storage_path?: string | null
           notes?: string | null
           occurred_at?: string
-          overall_rating: number
+          overall_rating?: number
           price?: number | null
           shop?: string | null
           texture?: string[]
           transaction_id?: string | null
           updated_at?: string
           user_id?: string
-          would_order_again: string
+          would_order_again?: string | null
         }
         Update: {
           created_at?: string
@@ -276,7 +276,7 @@ export type Database = {
           transaction_id?: string | null
           updated_at?: string
           user_id?: string
-          would_order_again?: string
+          would_order_again?: string | null
         }
         Relationships: [
           {

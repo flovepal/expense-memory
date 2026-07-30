@@ -53,16 +53,15 @@ import { ShopPicker } from "@/features/dishes/components/shop-picker"
 import { DishPicker } from "@/features/dishes/components/dish-picker"
 import { DishCart, cartTotal, type CartItem } from "@/features/dishes/components/dish-cart"
 import { CostConfirmDialog } from "@/features/dishes/components/cost-confirm-dialog"
-import {
-  DishTastePromptDialog,
-  type TastePromptDish,
-} from "@/features/dishes/components/dish-taste-prompt-dialog"
+import { DishTastePromptDialog } from "@/features/dishes/components/dish-taste-prompt-dialog"
 import { useShops } from "@/features/dishes/hooks/use-shops"
 import { useCreateTransactionDishItems } from "@/features/dishes/hooks/use-transaction-dishes"
+import { useEnsureFoodLogEntriesForDishes } from "@/features/food-log/hooks/use-food-log"
 import { TRANSACTION_RECORD_TYPES, TRANSACTION_RECORD_TYPE_LABELS } from "@/types/enums"
 import type { TransactionDetailed } from "@/services/repositories/transactions.repository"
 import type { Dish } from "@/services/repositories/dishes.repository"
 import type { Shop } from "@/services/repositories/shops.repository"
+import type { FoodLogEntry } from "@/services/repositories/food-log.repository"
 import { useAuth } from "@/hooks/use-auth"
 import { cn } from "@/lib/utils"
 import { toast } from "@/lib/toast"
@@ -106,9 +105,9 @@ export function TransactionFormDialog({
   const [amountManuallyEdited, setAmountManuallyEdited] = React.useState(false)
   const [costConfirmOpen, setCostConfirmOpen] = React.useState(false)
   const [pendingSubmitValues, setPendingSubmitValues] = React.useState<TransactionFormValues | null>(null)
-  const [tastePrompt, setTastePrompt] = React.useState<{ open: boolean; dishes: TastePromptDish[] }>({
+  const [tastePrompt, setTastePrompt] = React.useState<{ open: boolean; entries: FoodLogEntry[] }>({
     open: false,
-    dishes: [],
+    entries: [],
   })
 
   const isEditing = !!transaction
@@ -122,6 +121,7 @@ export function TransactionFormDialog({
   const updateTransaction = useUpdateTransaction()
   const uploadAttachment = useUploadAttachment()
   const createTransactionDishItems = useCreateTransactionDishItems()
+  const ensureFoodLogEntries = useEnsureFoodLogEntriesForDishes()
 
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionFormSchema),
@@ -373,6 +373,7 @@ export function TransactionFormDialog({
         }
       }
 
+      let ensuredEntries: FoodLogEntry[] = []
       if (isFoodCategory && dishCart.length > 0) {
         try {
           await createTransactionDishItems.mutateAsync({
@@ -382,23 +383,34 @@ export function TransactionFormDialog({
         } catch (error) {
           toast.error(error, "Transaction saved, but the dishes couldn't be attached")
         }
+
+        // Every dish gets a Food Log entry the moment it's bought — even
+        // before its taste is logged — so it always shows up in the Food
+        // Log tab. Existing entries (a repeat purchase) are left untouched.
+        try {
+          ensuredEntries = await ensureFoodLogEntries.mutateAsync(
+            dishCart
+              .filter((item) => item.dish_id)
+              .map((item) => ({
+                dish_id: item.dish_id!,
+                food_name: item.dish_name,
+                price: item.unit_price,
+                currency_id: item.currency_id,
+                shop: shop?.name,
+                image_storage_path: item.image_storage_path,
+                occurred_at: new Date(values.occurred_at).toISOString(),
+              }))
+          )
+        } catch (error) {
+          toast.error(error, "Transaction saved, but the food log couldn't be updated")
+        }
       }
 
       setOpen(false)
 
       // Only prompt on a fresh Food purchase, not when correcting an old one.
-      if (!isEditing && isFoodCategory && dishCart.length > 0) {
-        setTastePrompt({
-          open: true,
-          dishes: dishCart.map((item) => ({
-            dish_id: item.dish_id ?? item.key,
-            dish_name: item.dish_name,
-            unit_price: item.unit_price,
-            currency_code: walletCurrencyCode ?? "USD",
-            shop_name: shop?.name,
-            image_storage_path: item.image_storage_path,
-          })),
-        })
+      if (!isEditing && isFoodCategory && ensuredEntries.length > 0) {
+        setTastePrompt({ open: true, entries: ensuredEntries })
       }
     } catch (error) {
       toast.error(error, "Couldn't save transaction")
@@ -764,7 +776,7 @@ export function TransactionFormDialog({
       <DishTastePromptDialog
         open={tastePrompt.open}
         onOpenChange={(nextOpen) => setTastePrompt((current) => ({ ...current, open: nextOpen }))}
-        dishes={tastePrompt.dishes}
+        entries={tastePrompt.entries}
       />
     </Dialog>
   )
