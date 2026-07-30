@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Camera, X } from "lucide-react"
+import { Camera, Images, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -14,7 +14,8 @@ export function AttachmentPicker({
   files: File[]
   onChange: (files: File[]) => void
 }) {
-  const inputRef = React.useRef<HTMLInputElement>(null)
+  const cameraInputRef = React.useRef<HTMLInputElement>(null)
+  const galleryInputRef = React.useRef<HTMLInputElement>(null)
   const [staged, setStaged] = React.useState<StagedFile[]>([])
 
   React.useEffect(() => {
@@ -60,14 +61,31 @@ export function AttachmentPicker({
           type="button"
           variant="outline"
           className="size-16 flex-col gap-1 text-xs"
-          onClick={() => inputRef.current?.click()}
+          onClick={() => cameraInputRef.current?.click()}
         >
           <Camera className="size-4" />
-          Add
+          Camera
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          className="size-16 flex-col gap-1 text-xs"
+          onClick={() => galleryInputRef.current?.click()}
+        >
+          <Images className="size-4" />
+          Gallery
         </Button>
       </div>
       <input
-        ref={inputRef}
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={handleSelect}
+      />
+      <input
+        ref={galleryInputRef}
         type="file"
         accept="image/*"
         multiple

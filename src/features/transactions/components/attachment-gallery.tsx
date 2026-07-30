@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Camera, Loader2, Trash2 } from "lucide-react"
+import { Camera, Images, Loader2, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -17,7 +17,8 @@ import { toast } from "@/lib/toast"
 /** Edit-mode receipt gallery: the transaction already has an id, so uploads happen immediately instead of staging like AttachmentPicker does for create-mode. */
 export function AttachmentGallery({ transactionId }: { transactionId: string }) {
   const { user } = useAuth()
-  const inputRef = React.useRef<HTMLInputElement>(null)
+  const cameraInputRef = React.useRef<HTMLInputElement>(null)
+  const galleryInputRef = React.useRef<HTMLInputElement>(null)
   const [lightboxIndex, setLightboxIndex] = React.useState<number | null>(null)
 
   const attachments = useTransactionAttachments(transactionId)
@@ -92,18 +93,36 @@ export function AttachmentGallery({ transactionId }: { transactionId: string }) 
           variant="outline"
           className="size-16 flex-col gap-1 text-xs"
           disabled={uploadAttachment.isPending}
-          onClick={() => inputRef.current?.click()}
+          onClick={() => cameraInputRef.current?.click()}
         >
           {uploadAttachment.isPending ? (
             <Loader2 className="size-4 animate-spin" />
           ) : (
             <Camera className="size-4" />
           )}
-          Add
+          Camera
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          className="size-16 flex-col gap-1 text-xs"
+          disabled={uploadAttachment.isPending}
+          onClick={() => galleryInputRef.current?.click()}
+        >
+          <Images className="size-4" />
+          Gallery
         </Button>
       </div>
       <input
-        ref={inputRef}
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={handleSelect}
+      />
+      <input
+        ref={galleryInputRef}
         type="file"
         accept="image/*"
         multiple
