@@ -117,6 +117,85 @@ export type Database = {
         }
         Relationships: []
       }
+      food_log_entries: {
+        Row: {
+          created_at: string
+          currency_id: string | null
+          deleted_at: string | null
+          flavors: string[]
+          food_name: string
+          id: string
+          notes: string | null
+          occurred_at: string
+          overall_rating: number
+          price: number | null
+          shop: string | null
+          texture: string[]
+          transaction_id: string | null
+          updated_at: string
+          user_id: string
+          would_order_again: string
+        }
+        Insert: {
+          created_at?: string
+          currency_id?: string | null
+          deleted_at?: string | null
+          flavors?: string[]
+          food_name: string
+          id?: string
+          notes?: string | null
+          occurred_at?: string
+          overall_rating: number
+          price?: number | null
+          shop?: string | null
+          texture?: string[]
+          transaction_id?: string | null
+          updated_at?: string
+          user_id?: string
+          would_order_again: string
+        }
+        Update: {
+          created_at?: string
+          currency_id?: string | null
+          deleted_at?: string | null
+          flavors?: string[]
+          food_name?: string
+          id?: string
+          notes?: string | null
+          occurred_at?: string
+          overall_rating?: number
+          price?: number | null
+          shop?: string | null
+          texture?: string[]
+          transaction_id?: string | null
+          updated_at?: string
+          user_id?: string
+          would_order_again?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "food_log_entries_currency_id_fkey"
+            columns: ["currency_id"]
+            isOneToOne: false
+            referencedRelation: "currencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "food_log_entries_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "food_log_entries_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions_detailed"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       question_options: {
         Row: {
           created_at: string

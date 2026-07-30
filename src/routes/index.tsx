@@ -35,6 +35,11 @@ export const router = createBrowserRouter([
         lazy: () => import("@/features/tags/tags-page").then((m) => ({ Component: m.TagsPage })),
       },
       {
+        path: "food-log",
+        lazy: () =>
+          import("@/features/food-log/food-log-page").then((m) => ({ Component: m.FoodLogPage })),
+      },
+      {
         path: "settings",
         lazy: () =>
           import("@/features/settings/settings-page").then((m) => ({ Component: m.SettingsPage })),

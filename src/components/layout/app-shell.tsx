@@ -5,6 +5,7 @@ import {
   Wallet as WalletIcon,
   Tags,
   FolderTree,
+  UtensilsCrossed,
   Settings as SettingsIcon,
   LogOut,
 } from "lucide-react"
@@ -20,6 +21,7 @@ const NAV_ITEMS = [
   { to: "/wallets", label: "Wallets", icon: WalletIcon },
   { to: "/categories", label: "Categories", icon: FolderTree },
   { to: "/tags", label: "Tags", icon: Tags },
+  { to: "/food-log", label: "Food Log", icon: UtensilsCrossed },
   { to: "/settings", label: "Settings", icon: SettingsIcon },
 ]
 
