@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
+import { Label } from "@/components/ui/label"
 import {
   Form,
   FormControl,
@@ -34,6 +35,7 @@ import { useCategories } from "@/features/categories/hooks/use-categories"
 import { useSubcategories } from "@/features/categories/hooks/use-subcategories"
 import { useQuestionsForTransactionContext } from "@/features/categories/hooks/use-questions"
 import { useTags } from "@/features/tags/hooks/use-tags"
+import { useCurrencies } from "@/features/currencies/hooks/use-currencies"
 import {
   useCreateTransaction,
   useUpdateTransaction,
@@ -47,8 +49,20 @@ import {
 } from "@/features/transactions/components/dynamic-question-field"
 import { AttachmentPicker } from "@/features/transactions/components/attachment-picker"
 import { AttachmentGallery } from "@/features/transactions/components/attachment-gallery"
+import { ShopPicker } from "@/features/dishes/components/shop-picker"
+import { DishPicker } from "@/features/dishes/components/dish-picker"
+import { DishCart, cartTotal, type CartItem } from "@/features/dishes/components/dish-cart"
+import { CostConfirmDialog } from "@/features/dishes/components/cost-confirm-dialog"
+import {
+  DishTastePromptDialog,
+  type TastePromptDish,
+} from "@/features/dishes/components/dish-taste-prompt-dialog"
+import { useShops } from "@/features/dishes/hooks/use-shops"
+import { useCreateTransactionDishItems } from "@/features/dishes/hooks/use-transaction-dishes"
 import { TRANSACTION_RECORD_TYPES, TRANSACTION_RECORD_TYPE_LABELS } from "@/types/enums"
 import type { TransactionDetailed } from "@/services/repositories/transactions.repository"
+import type { Dish } from "@/services/repositories/dishes.repository"
+import type { Shop } from "@/services/repositories/shops.repository"
 import { useAuth } from "@/hooks/use-auth"
 import { cn } from "@/lib/utils"
 import { toast } from "@/lib/toast"
@@ -62,6 +76,14 @@ type ExistingAnswer = {
   answer_date: string | null
   selected_option_id: string | null
   selected_option_ids: string[] | null
+}
+type ExistingDishItem = {
+  id: string
+  dish_id: string | null
+  dish_name: string
+  unit_price: number
+  quantity: number
+  image_storage_path: string | null
 }
 
 function toDateInputValue(iso: string): string {
@@ -79,15 +101,27 @@ export function TransactionFormDialog({
   const [answers, setAnswers] = React.useState<Record<string, AnswerValue>>({})
   const [tagIds, setTagIds] = React.useState<string[]>([])
   const [pendingFiles, setPendingFiles] = React.useState<File[]>([])
+  const [shop, setShop] = React.useState<Shop | null>(null)
+  const [dishCart, setDishCart] = React.useState<CartItem[]>([])
+  const [amountManuallyEdited, setAmountManuallyEdited] = React.useState(false)
+  const [costConfirmOpen, setCostConfirmOpen] = React.useState(false)
+  const [pendingSubmitValues, setPendingSubmitValues] = React.useState<TransactionFormValues | null>(null)
+  const [tastePrompt, setTastePrompt] = React.useState<{ open: boolean; dishes: TastePromptDish[] }>({
+    open: false,
+    dishes: [],
+  })
 
   const isEditing = !!transaction
 
   const { user } = useAuth()
   const wallets = useWallets()
   const tags = useTags()
+  const shops = useShops()
+  const currencies = useCurrencies()
   const createTransaction = useCreateTransaction()
   const updateTransaction = useUpdateTransaction()
   const uploadAttachment = useUploadAttachment()
+  const createTransactionDishItems = useCreateTransactionDishItems()
 
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionFormSchema),
@@ -128,6 +162,23 @@ export function TransactionFormDialog({
     (w) => w.id !== walletId && (!sourceWallet || w.currency_id === sourceWallet.currency_id)
   )
 
+  const currencyById = new Map((currencies.data ?? []).map((c) => [c.id, c]))
+  const walletCurrencyCode = sourceWallet ? currencyById.get(sourceWallet.currency_id)?.code : undefined
+
+  // The dish/shop catalog flow only applies to the Food category — everything
+  // else keeps the plain free-text merchant field.
+  const selectedCategoryName = categories.data?.find((c) => c.id === categoryId)?.name
+  const isFoodCategory = !isTransfer && selectedCategoryName === "Food"
+
+  // While the amount tracks the cart total live, it's read-only; "Edit
+  // manually" (or the cost-confirm dialog's override) unlocks it.
+  React.useEffect(() => {
+    if (isFoodCategory && dishCart.length > 0 && !amountManuallyEdited) {
+      form.setValue("amount", cartTotal(dishCart))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dishCart, amountManuallyEdited, isFoodCategory])
+
   React.useEffect(() => {
     if (!open) return
 
@@ -162,6 +213,26 @@ export function TransactionFormDialog({
       )
       const existingTags = (transaction.tags as unknown as ExistingTag[] | null) ?? []
       setTagIds(existingTags.map((t) => t.id))
+
+      // Reconstruct the shop/cart display from the saved snapshot. Amount
+      // stays manually-controlled on edit (not re-synced to the cart total)
+      // so a discount-adjusted historical amount is never silently
+      // overwritten just by opening the dialog.
+      const matchedShop = shops.data?.find((s) => s.name === transaction.merchant) ?? null
+      setShop(matchedShop)
+      const existingDishItems = (transaction.dish_items as unknown as ExistingDishItem[] | null) ?? []
+      setDishCart(
+        existingDishItems.map((item) => ({
+          key: item.id,
+          dish_id: item.dish_id,
+          dish_name: item.dish_name,
+          unit_price: item.unit_price,
+          quantity: item.quantity,
+          currency_id: sourceWallet?.currency_id ?? null,
+          image_storage_path: item.image_storage_path,
+        }))
+      )
+      setAmountManuallyEdited(true)
     } else {
       form.reset({
         wallet_id: "",
@@ -177,6 +248,9 @@ export function TransactionFormDialog({
       setAnswers({})
       setTagIds([])
       setPendingFiles([])
+      setShop(null)
+      setDishCart([])
+      setAmountManuallyEdited(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, transaction?.id])
@@ -188,12 +262,56 @@ export function TransactionFormDialog({
     form.setValue("to_wallet_id", "")
     setAnswers({})
     setPendingFiles([])
+    setShop(null)
+    setDishCart([])
+    setAmountManuallyEdited(false)
   }
 
   function handleCategoryChange(nextCategoryId: string | null) {
     form.setValue("category_id", nextCategoryId ?? "")
     form.setValue("subcategory_id", "")
     setAnswers({})
+    setShop(null)
+    setDishCart([])
+    setAmountManuallyEdited(false)
+  }
+
+  function handleShopSelect(nextShop: Shop | null) {
+    setShop(nextShop)
+    form.setValue("merchant", nextShop?.name ?? "")
+    setDishCart([])
+    setAmountManuallyEdited(false)
+  }
+
+  function handleAddDish(dish: Dish) {
+    setDishCart((current) => {
+      const existing = current.find((item) => item.dish_id === dish.id)
+      if (existing) {
+        return current.map((item) =>
+          item.key === existing.key ? { ...item, quantity: item.quantity + 1 } : item
+        )
+      }
+      return [
+        ...current,
+        {
+          key: dish.id,
+          dish_id: dish.id,
+          dish_name: dish.name,
+          unit_price: dish.price,
+          quantity: 1,
+          currency_id: dish.currency_id,
+          image_storage_path: dish.image_storage_path,
+        },
+      ]
+    })
+  }
+
+  function handleDishQuantityChange(key: string, quantity: number) {
+    setDishCart((current) => current.map((item) => (item.key === key ? { ...item, quantity } : item)))
+  }
+
+  function handleRemoveDish(key: string) {
+    setDishCart((current) => current.filter((item) => item.key !== key))
   }
 
   function handleSubcategoryChange(nextSubcategoryId: string | null) {
@@ -207,15 +325,7 @@ export function TransactionFormDialog({
     )
   }
 
-  async function onSubmit(values: TransactionFormValues) {
-    const unanswered = (questions.data ?? []).filter(
-      (q) => q.is_required && !answers[q.id]
-    )
-    if (unanswered.length > 0) {
-      toast.error(`Please answer: ${unanswered.map((q) => q.prompt).join(", ")}`)
-      return
-    }
-
+  async function performSave(values: TransactionFormValues) {
     const isTransferSubmit = values.transaction_type === "transfer"
 
     const input = {
@@ -263,10 +373,56 @@ export function TransactionFormDialog({
         }
       }
 
+      if (isFoodCategory && dishCart.length > 0) {
+        try {
+          await createTransactionDishItems.mutateAsync({
+            transactionId: savedId,
+            items: dishCart.map(({ key, ...item }) => item),
+          })
+        } catch (error) {
+          toast.error(error, "Transaction saved, but the dishes couldn't be attached")
+        }
+      }
+
       setOpen(false)
+
+      // Only prompt on a fresh Food purchase, not when correcting an old one.
+      if (!isEditing && isFoodCategory && dishCart.length > 0) {
+        setTastePrompt({
+          open: true,
+          dishes: dishCart.map((item) => ({
+            dish_id: item.dish_id ?? item.key,
+            dish_name: item.dish_name,
+            unit_price: item.unit_price,
+            currency_code: walletCurrencyCode ?? "USD",
+            shop_name: shop?.name,
+          })),
+        })
+      }
     } catch (error) {
       toast.error(error, "Couldn't save transaction")
     }
+  }
+
+  async function onSubmit(values: TransactionFormValues) {
+    const unanswered = (questions.data ?? []).filter(
+      (q) => q.is_required && !answers[q.id]
+    )
+    if (unanswered.length > 0) {
+      toast.error(`Please answer: ${unanswered.map((q) => q.prompt).join(", ")}`)
+      return
+    }
+
+    // A dish-sum amount needs a "is this really the cost?" checkpoint before
+    // saving, since discounts/offers mean the catalog sum isn't always the
+    // real total. Manually-edited amounts skip straight through.
+    if (isFoodCategory && dishCart.length > 0 && !amountManuallyEdited) {
+      setPendingSubmitValues(values)
+      setCostConfirmOpen(true)
+      return
+    }
+
+    await performSave(values)
   }
 
   const isSubmitting = createTransaction.isPending || updateTransaction.isPending
@@ -432,22 +588,47 @@ export function TransactionFormDialog({
                   />
                 )}
 
-                <FormField
-                  control={form.control}
-                  name="merchant"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Shop / merchant (optional)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g. 7-Eleven" list="merchant-options" {...field} />
-                      </FormControl>
-                      <datalist id="merchant-options">
-                        {merchants.data?.map((name) => <option key={name} value={name} />)}
-                      </datalist>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {isFoodCategory ? (
+                  <div className="grid gap-3">
+                    <div className="grid gap-1.5">
+                      <Label>Shop</Label>
+                      <ShopPicker value={shop} onSelect={handleShopSelect} />
+                    </div>
+                    {shop && (
+                      <div className="grid gap-1.5">
+                        <Label>Dishes</Label>
+                        <DishPicker
+                          shopId={shop.id}
+                          onSelect={handleAddDish}
+                          defaultCurrencyId={sourceWallet?.currency_id}
+                        />
+                        <DishCart
+                          items={dishCart}
+                          currencyCode={walletCurrencyCode ?? "USD"}
+                          onQuantityChange={handleDishQuantityChange}
+                          onRemove={handleRemoveDish}
+                        />
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <FormField
+                    control={form.control}
+                    name="merchant"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Shop / merchant (optional)</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g. 7-Eleven" list="merchant-options" {...field} />
+                        </FormControl>
+                        <datalist id="merchant-options">
+                          {merchants.data?.map((name) => <option key={name} value={name} />)}
+                        </datalist>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
               </>
             )}
 
@@ -455,20 +636,36 @@ export function TransactionFormDialog({
               <FormField
                 control={form.control}
                 name="amount"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Amount</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        {...field}
-                        onChange={(e) => field.onChange(e.target.valueAsNumber || 0)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  const isAutoTracking = isFoodCategory && dishCart.length > 0 && !amountManuallyEdited
+                  return (
+                    <FormItem>
+                      <FormLabel>Amount</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          readOnly={isAutoTracking}
+                          {...field}
+                          onChange={(e) => field.onChange(e.target.valueAsNumber || 0)}
+                        />
+                      </FormControl>
+                      {isAutoTracking && (
+                        <p className="text-xs text-muted-foreground">
+                          Tracking the dish total —{" "}
+                          <button
+                            type="button"
+                            className="underline"
+                            onClick={() => setAmountManuallyEdited(true)}
+                          >
+                            edit manually
+                          </button>
+                        </p>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )
+                }}
               />
               <FormField
                 control={form.control}
@@ -501,7 +698,7 @@ export function TransactionFormDialog({
 
             {(tags.data ?? []).length > 0 && (
               <div className="grid gap-1.5">
-                <FormLabel>Tags</FormLabel>
+                <Label>Tags</Label>
                 <div className="flex flex-wrap gap-1.5">
                   {tags.data?.map((tag) => (
                     <Badge
@@ -547,6 +744,27 @@ export function TransactionFormDialog({
           </form>
         </Form>
       </DialogContent>
+
+      <CostConfirmDialog
+        open={costConfirmOpen}
+        onOpenChange={setCostConfirmOpen}
+        amount={cartTotal(dishCart)}
+        currencyCode={walletCurrencyCode ?? "USD"}
+        onConfirm={() => {
+          setCostConfirmOpen(false)
+          if (pendingSubmitValues) performSave(pendingSubmitValues)
+        }}
+        onOverride={() => {
+          setCostConfirmOpen(false)
+          setAmountManuallyEdited(true)
+        }}
+      />
+
+      <DishTastePromptDialog
+        open={tastePrompt.open}
+        onOpenChange={(nextOpen) => setTastePrompt((current) => ({ ...current, open: nextOpen }))}
+        dishes={tastePrompt.dishes}
+      />
     </Dialog>
   )
 }

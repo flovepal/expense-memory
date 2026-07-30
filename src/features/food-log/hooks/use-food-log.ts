@@ -3,18 +3,29 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   foodLogRepository,
   type FoodLogEntryCreateInput,
+  type FoodLogEntryFilters,
   type FoodLogEntryUpdateInput,
 } from "@/services/repositories/food-log.repository"
 
 export const foodLogKeys = {
   all: ["food-log"] as const,
   lists: () => [...foodLogKeys.all, "list"] as const,
+  list: (filters: FoodLogEntryFilters) => [...foodLogKeys.lists(), filters] as const,
+  shops: () => [...foodLogKeys.all, "shops"] as const,
 }
 
-export function useFoodLogEntries() {
+export function useFoodLogEntries(filters: FoodLogEntryFilters = {}) {
   return useQuery({
-    queryKey: foodLogKeys.lists(),
-    queryFn: () => foodLogRepository.list(),
+    queryKey: foodLogKeys.list(filters),
+    queryFn: () => foodLogRepository.list(filters),
+  })
+}
+
+/** Distinct shop names for the Food Log's filter dropdown. Invalidated automatically whenever an entry is created/updated (covered by foodLogKeys.all). */
+export function useFoodLogShops() {
+  return useQuery({
+    queryKey: foodLogKeys.shops(),
+    queryFn: () => foodLogRepository.listShops(),
   })
 }
 

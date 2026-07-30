@@ -35,6 +35,9 @@ import { useCurrencies } from "@/features/currencies/hooks/use-currencies"
 import { useSettings } from "@/features/settings/hooks/use-settings"
 import { useTransaction } from "@/features/transactions/hooks/use-transactions"
 import { TransactionPicker } from "@/features/food-log/components/transaction-picker"
+import { DishPicker } from "@/features/dishes/components/dish-picker"
+import { useDish } from "@/features/dishes/hooks/use-dishes"
+import { useShops } from "@/features/dishes/hooks/use-shops"
 import {
   useCreateFoodLogEntry,
   useUpdateFoodLogEntry,
@@ -51,8 +54,19 @@ import {
 } from "@/features/food-log/schemas"
 import type { FoodLogEntry } from "@/services/repositories/food-log.repository"
 import type { TransactionDetailed } from "@/services/repositories/transactions.repository"
+import type { Dish } from "@/services/repositories/dishes.repository"
 import { cn } from "@/lib/utils"
 import { toast } from "@/lib/toast"
+
+/** Seeds a brand-new entry from a dish (e.g. the post-save "log the taste?" prompt after a Food transaction) — distinct from `entry`, which is for editing an existing saved entry. */
+export type FoodLogPrefill = {
+  dish_id: string
+  food_name: string
+  shop?: string | null
+  price?: number | null
+  currency_id?: string | null
+  image_storage_path?: string | null
+}
 
 function toDateInputValue(iso: string): string {
   return new Date(iso).toISOString().slice(0, 10)
@@ -82,19 +96,24 @@ function StarRatingInput({ value, onChange }: { value: number; onChange: (n: num
 
 export function FoodLogFormDialog({
   entry,
+  prefill,
   trigger,
 }: {
   entry?: FoodLogEntry
+  prefill?: FoodLogPrefill
   trigger: React.ReactElement
 }) {
   const [open, setOpen] = React.useState(false)
   const [linkedTransaction, setLinkedTransaction] = React.useState<TransactionDetailed | null>(null)
+  const [linkedDish, setLinkedDish] = React.useState<Dish | null>(null)
 
   const isEditing = !!entry
 
   const currencies = useCurrencies()
+  const shops = useShops()
   const settings = useSettings()
   const linkedTransactionQuery = useTransaction(entry?.transaction_id ?? undefined)
+  const linkedDishQuery = useDish(entry?.dish_id ?? prefill?.dish_id ?? undefined)
   const createEntry = useCreateFoodLogEntry()
   const updateEntry = useUpdateFoodLogEntry()
 
@@ -131,6 +150,22 @@ export function FoodLogFormDialog({
         notes: entry.notes ?? "",
       })
       setLinkedTransaction(entry.transaction_id ? (linkedTransactionQuery.data ?? null) : null)
+      setLinkedDish(entry.dish_id ? (linkedDishQuery.data ?? null) : null)
+    } else if (prefill) {
+      form.reset({
+        food_name: prefill.food_name,
+        shop: prefill.shop ?? "",
+        price: prefill.price ?? undefined,
+        currency_id: prefill.currency_id ?? settings.data?.default_currency_id ?? "",
+        occurred_at: new Date().toISOString().slice(0, 10),
+        overall_rating: 0,
+        flavors: [],
+        texture: [],
+        would_order_again: undefined,
+        notes: "",
+      })
+      setLinkedTransaction(null)
+      setLinkedDish(linkedDishQuery.data ?? null)
     } else {
       form.reset({
         food_name: "",
@@ -145,17 +180,31 @@ export function FoodLogFormDialog({
         notes: "",
       })
       setLinkedTransaction(null)
+      setLinkedDish(null)
     }
+    // Deliberately NOT depending on settings.data?.default_currency_id: it
+    // loads asynchronously, and re-running this reset once it arrives would
+    // wipe out whatever the user has already typed. It's only used here as
+    // a same-tick fallback for whatever value happens to be available when
+    // the dialog opens.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, entry?.id, settings.data?.default_currency_id])
+  }, [open, entry?.id, prefill?.dish_id])
 
-  // The linked transaction loads asynchronously — sync it in once it arrives.
+  // The linked transaction/dish load asynchronously — sync them in once they arrive.
   React.useEffect(() => {
     if (open && entry?.transaction_id && linkedTransactionQuery.data) {
       setLinkedTransaction(linkedTransactionQuery.data)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [linkedTransactionQuery.data])
+
+  React.useEffect(() => {
+    const dishId = entry?.dish_id ?? prefill?.dish_id
+    if (open && dishId && linkedDishQuery.data) {
+      setLinkedDish(linkedDishQuery.data)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [linkedDishQuery.data])
 
   function handleTransactionSelect(transaction: TransactionDetailed | null) {
     setLinkedTransaction(transaction)
@@ -167,6 +216,15 @@ export function FoodLogFormDialog({
         form.setValue("occurred_at", toDateInputValue(transaction.occurred_at))
       }
     }
+  }
+
+  function handleDishSelect(dish: Dish) {
+    setLinkedDish(dish)
+    form.setValue("food_name", dish.name)
+    form.setValue("price", dish.price)
+    if (dish.currency_id) form.setValue("currency_id", dish.currency_id)
+    const shopName = shops.data?.find((s) => s.id === dish.shop_id)?.name
+    if (shopName) form.setValue("shop", shopName)
   }
 
   function toggleFlavor(flavor: FoodLogFormValues["flavors"][number]) {
@@ -189,6 +247,9 @@ export function FoodLogFormDialog({
     const input = {
       food_name: values.food_name,
       transaction_id: linkedTransaction?.id ?? null,
+      dish_id: linkedDish?.id ?? null,
+      dish_category_id: linkedDish?.dish_category_id ?? null,
+      image_storage_path: linkedDish?.image_storage_path ?? null,
       shop: values.shop || null,
       price: values.price ?? null,
       currency_id: values.currency_id || null,
@@ -242,6 +303,19 @@ export function FoodLogFormDialog({
                 </FormItem>
               )}
             />
+
+            <div className="grid gap-1.5">
+              <Label>Link a dish</Label>
+              <DishPicker value={linkedDish} onSelect={handleDishSelect} />
+              {linkedDish && (
+                <p className="text-xs text-muted-foreground">
+                  Auto-filled from the dish catalog — editing the fields below won't change it.{" "}
+                  <button type="button" className="underline" onClick={() => setLinkedDish(null)}>
+                    Unlink
+                  </button>
+                </p>
+              )}
+            </div>
 
             <div className="grid gap-1.5">
               <Label>Link a transaction</Label>

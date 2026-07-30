@@ -117,14 +117,114 @@ export type Database = {
         }
         Relationships: []
       }
+      dish_categories: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          display_order: number
+          icon: string | null
+          id: string
+          name: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          deleted_at?: string | null
+          display_order?: number
+          icon?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string | null
+          display_order?: number
+          icon?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      dishes: {
+        Row: {
+          created_at: string
+          currency_id: string | null
+          deleted_at: string | null
+          dish_category_id: string | null
+          id: string
+          image_storage_path: string | null
+          name: string
+          price: number
+          shop_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          currency_id?: string | null
+          deleted_at?: string | null
+          dish_category_id?: string | null
+          id?: string
+          image_storage_path?: string | null
+          name: string
+          price: number
+          shop_id: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          currency_id?: string | null
+          deleted_at?: string | null
+          dish_category_id?: string | null
+          id?: string
+          image_storage_path?: string | null
+          name?: string
+          price?: number
+          shop_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dishes_currency_id_fkey"
+            columns: ["currency_id"]
+            isOneToOne: false
+            referencedRelation: "currencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dishes_dish_category_id_fkey"
+            columns: ["dish_category_id"]
+            isOneToOne: false
+            referencedRelation: "dish_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dishes_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       food_log_entries: {
         Row: {
           created_at: string
           currency_id: string | null
           deleted_at: string | null
+          dish_category_id: string | null
+          dish_id: string | null
           flavors: string[]
           food_name: string
           id: string
+          image_storage_path: string | null
           notes: string | null
           occurred_at: string
           overall_rating: number
@@ -140,9 +240,12 @@ export type Database = {
           created_at?: string
           currency_id?: string | null
           deleted_at?: string | null
+          dish_category_id?: string | null
+          dish_id?: string | null
           flavors?: string[]
           food_name: string
           id?: string
+          image_storage_path?: string | null
           notes?: string | null
           occurred_at?: string
           overall_rating: number
@@ -158,9 +261,12 @@ export type Database = {
           created_at?: string
           currency_id?: string | null
           deleted_at?: string | null
+          dish_category_id?: string | null
+          dish_id?: string | null
           flavors?: string[]
           food_name?: string
           id?: string
+          image_storage_path?: string | null
           notes?: string | null
           occurred_at?: string
           overall_rating?: number
@@ -178,6 +284,20 @@ export type Database = {
             columns: ["currency_id"]
             isOneToOne: false
             referencedRelation: "currencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "food_log_entries_dish_category_id_fkey"
+            columns: ["dish_category_id"]
+            isOneToOne: false
+            referencedRelation: "dish_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "food_log_entries_dish_id_fkey"
+            columns: ["dish_id"]
+            isOneToOne: false
+            referencedRelation: "dishes"
             referencedColumns: ["id"]
           },
           {
@@ -334,6 +454,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      shops: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       subcategories: {
         Row: {
@@ -524,6 +671,74 @@ export type Database = {
           },
           {
             foreignKeyName: "transaction_attachments_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions_detailed"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transaction_dish_items: {
+        Row: {
+          created_at: string
+          currency_id: string | null
+          dish_id: string | null
+          dish_name: string
+          id: string
+          image_storage_path: string | null
+          quantity: number
+          transaction_id: string
+          unit_price: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          currency_id?: string | null
+          dish_id?: string | null
+          dish_name: string
+          id?: string
+          image_storage_path?: string | null
+          quantity?: number
+          transaction_id: string
+          unit_price: number
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          currency_id?: string | null
+          dish_id?: string | null
+          dish_name?: string
+          id?: string
+          image_storage_path?: string | null
+          quantity?: number
+          transaction_id?: string
+          unit_price?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transaction_dish_items_currency_id_fkey"
+            columns: ["currency_id"]
+            isOneToOne: false
+            referencedRelation: "currencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_dish_items_dish_id_fkey"
+            columns: ["dish_id"]
+            isOneToOne: false
+            referencedRelation: "dishes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_dish_items_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_dish_items_transaction_id_fkey"
             columns: ["transaction_id"]
             isOneToOne: false
             referencedRelation: "transactions_detailed"
@@ -772,6 +987,7 @@ export type Database = {
           currency_code: string | null
           currency_id: string | null
           currency_symbol: string | null
+          dish_items: Json | null
           id: string | null
           merchant: string | null
           note: string | null

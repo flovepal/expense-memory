@@ -1,3 +1,4 @@
+import * as React from "react"
 import { Link as LinkIcon, Pencil, Star, Trash2 } from "lucide-react"
 
 import {
@@ -24,6 +25,8 @@ import {
 import { FoodLogFormDialog } from "@/features/food-log/components/food-log-form-dialog"
 import { useDeleteFoodLogEntry } from "@/features/food-log/hooks/use-food-log"
 import { useCurrencies } from "@/features/currencies/hooks/use-currencies"
+import { useDishImageSignedUrls } from "@/features/dishes/hooks/use-dish-images"
+import { ImageLightbox } from "@/features/transactions/components/image-lightbox"
 import {
   FLAVOR_LABELS,
   TEXTURE_LABELS,
@@ -52,8 +55,17 @@ function StarDisplay({ rating }: { rating: number }) {
 export function FoodLogList({ entries }: { entries: FoodLogEntry[] }) {
   const deleteEntry = useDeleteFoodLogEntry()
   const currencies = useCurrencies()
+  const [lightboxEntryId, setLightboxEntryId] = React.useState<string | null>(null)
 
   const currencyById = new Map((currencies.data ?? []).map((c) => [c.id, c]))
+
+  const imagePaths = entries.map((e) => e.image_storage_path).filter((p): p is string => !!p)
+  const signedImageUrls = useDishImageSignedUrls(imagePaths)
+
+  const lightboxEntry = entries.find((e) => e.id === lightboxEntryId)
+  const lightboxUrl = lightboxEntry?.image_storage_path
+    ? signedImageUrls.data?.[lightboxEntry.image_storage_path]
+    : undefined
 
   function formatPrice(entry: FoodLogEntry) {
     if (entry.price == null) return null
@@ -68,6 +80,21 @@ export function FoodLogList({ entries }: { entries: FoodLogEntry[] }) {
     } catch (error) {
       toast.error(error, "Couldn't delete food log entry")
     }
+  }
+
+  function PhotoThumbnail({ entry }: { entry: FoodLogEntry }) {
+    if (!entry.image_storage_path) return null
+    const url = signedImageUrls.data?.[entry.image_storage_path]
+    if (!url) return null
+    return (
+      <button
+        type="button"
+        onClick={() => setLightboxEntryId(entry.id)}
+        className="size-10 shrink-0 overflow-hidden rounded-md border"
+      >
+        <img src={url} alt="" className="size-full object-cover" />
+      </button>
+    )
   }
 
   function FlavorTextureBadges({ entry }: { entry: FoodLogEntry }) {
@@ -131,14 +158,17 @@ export function FoodLogList({ entries }: { entries: FoodLogEntry[] }) {
         {entries.map((entry) => (
           <div key={entry.id} className="rounded-lg border p-3">
             <div className="flex items-start justify-between gap-2">
-              <div className="flex flex-col gap-0.5">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-medium">{entry.food_name}</span>
-                  {entry.transaction_id && (
-                    <LinkIcon className="size-3 text-muted-foreground" aria-label="Linked to a transaction" />
-                  )}
+              <div className="flex items-start gap-2">
+                <PhotoThumbnail entry={entry} />
+                <div className="flex flex-col gap-0.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-medium">{entry.food_name}</span>
+                    {entry.transaction_id && (
+                      <LinkIcon className="size-3 text-muted-foreground" aria-label="Linked to a transaction" />
+                    )}
+                  </div>
+                  <span className="text-xs text-muted-foreground">{formatDate(entry.occurred_at)}</span>
                 </div>
-                <span className="text-xs text-muted-foreground">{formatDate(entry.occurred_at)}</span>
               </div>
               <StarDisplay rating={entry.overall_rating} />
             </div>
@@ -187,15 +217,20 @@ export function FoodLogList({ entries }: { entries: FoodLogEntry[] }) {
               <TableRow key={entry.id}>
                 <TableCell className="whitespace-nowrap">{formatDate(entry.occurred_at)}</TableCell>
                 <TableCell className="max-w-56">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-medium">{entry.food_name}</span>
-                    {entry.transaction_id && (
-                      <LinkIcon className="size-3 shrink-0 text-muted-foreground" aria-label="Linked to a transaction" />
-                    )}
+                  <div className="flex items-center gap-2">
+                    <PhotoThumbnail entry={entry} />
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-medium">{entry.food_name}</span>
+                        {entry.transaction_id && (
+                          <LinkIcon className="size-3 shrink-0 text-muted-foreground" aria-label="Linked to a transaction" />
+                        )}
+                      </div>
+                      {entry.notes && (
+                        <p className="truncate text-xs text-muted-foreground">{entry.notes}</p>
+                      )}
+                    </div>
                   </div>
-                  {entry.notes && (
-                    <p className="truncate text-xs text-muted-foreground">{entry.notes}</p>
-                  )}
                 </TableCell>
                 <TableCell>
                   <StarDisplay rating={entry.overall_rating} />
@@ -222,6 +257,13 @@ export function FoodLogList({ entries }: { entries: FoodLogEntry[] }) {
           </TableBody>
         </Table>
       </div>
+
+      <ImageLightbox
+        images={lightboxUrl ? [{ id: lightboxEntryId!, url: lightboxUrl }] : []}
+        initialIndex={0}
+        open={!!lightboxEntryId}
+        onOpenChange={(open) => !open && setLightboxEntryId(null)}
+      />
     </>
   )
 }

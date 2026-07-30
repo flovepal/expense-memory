@@ -11,16 +11,28 @@ export type FoodLogEntryCreateInput = Omit<
 >
 export type FoodLogEntryUpdateInput = Partial<FoodLogEntryCreateInput>
 
+export type FoodLogEntryFilters = {
+  shop?: string
+  dishCategoryId?: string
+}
+
 export class FoodLogRepository {
-  async list(): Promise<FoodLogEntry[]> {
+  /** For browsing "what to eat where" — filter by shop or dish category. */
+  async list(filters: FoodLogEntryFilters = {}): Promise<FoodLogEntry[]> {
+    let query = supabase.from("food_log_entries").select("*").is("deleted_at", null)
+    if (filters.shop) query = query.eq("shop", filters.shop)
+    if (filters.dishCategoryId) query = query.eq("dish_category_id", filters.dishCategoryId)
     return unwrap(
-      supabase
-        .from("food_log_entries")
-        .select("*")
-        .is("deleted_at", null)
-        .order("occurred_at", { ascending: false })
-        .order("created_at", { ascending: false })
+      query.order("occurred_at", { ascending: false }).order("created_at", { ascending: false })
     )
+  }
+
+  /** Distinct shop names the user has logged food at, for the filter dropdown. */
+  async listShops(): Promise<string[]> {
+    const rows = await unwrap<{ shop: string | null }[]>(
+      supabase.from("food_log_entries").select("shop").not("shop", "is", null)
+    )
+    return Array.from(new Set(rows.map((r) => r.shop).filter((s): s is string => !!s))).sort()
   }
 
   async create(input: FoodLogEntryCreateInput): Promise<FoodLogEntry> {

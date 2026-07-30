@@ -26,6 +26,7 @@ import { TransactionFormDialog } from "@/features/transactions/components/transa
 import { ImageLightbox, type LightboxImage } from "@/features/transactions/components/image-lightbox"
 import { useDeleteTransaction } from "@/features/transactions/hooks/use-transactions"
 import { useAttachmentSignedUrls } from "@/features/transactions/hooks/use-attachments"
+import { useDishImageSignedUrls } from "@/features/dishes/hooks/use-dish-images"
 import { formatCurrency, formatDate } from "@/lib/format"
 import { toast } from "@/lib/toast"
 import { cn } from "@/lib/utils"
@@ -33,9 +34,21 @@ import type { TransactionDetailed } from "@/services/repositories/transactions.r
 
 type TransactionAttachmentSummary = { id: string; storage_path: string }
 type TagSummary = { id: string; name: string }
+type DishItemSummary = {
+  id: string
+  dish_id: string | null
+  dish_name: string
+  unit_price: number
+  quantity: number
+  image_storage_path: string | null
+}
 
 function getAttachments(transaction: TransactionDetailed): TransactionAttachmentSummary[] {
   return (transaction.attachments as unknown as TransactionAttachmentSummary[] | null) ?? []
+}
+
+function getDishItems(transaction: TransactionDetailed): DishItemSummary[] {
+  return (transaction.dish_items as unknown as DishItemSummary[] | null) ?? []
 }
 
 function amountClassName(type: string) {
@@ -60,6 +73,13 @@ export function TransactionList({ transactions }: { transactions: TransactionDet
   const attachmentPaths = transactions.flatMap((t) => getAttachments(t).map((a) => a.storage_path))
   const signedUrls = useAttachmentSignedUrls(attachmentPaths)
 
+  const dishImagePaths = transactions.flatMap((t) =>
+    getDishItems(t)
+      .map((d) => d.image_storage_path)
+      .filter((p): p is string => !!p)
+  )
+  const dishImageSignedUrls = useDishImageSignedUrls(dishImagePaths)
+
   async function handleDelete(id: string) {
     try {
       await deleteTransaction.mutateAsync(id)
@@ -75,6 +95,54 @@ export function TransactionList({ transactions }: { transactions: TransactionDet
       url: signedUrls.data?.[a.storage_path] ?? "",
     }))
     setLightbox({ images, index: clickedIndex })
+  }
+
+  function openDishLightbox(transaction: TransactionDetailed, clickedIndex: number) {
+    const images = getDishItems(transaction)
+      .filter((d) => d.image_storage_path)
+      .map((d) => ({ id: d.id, url: dishImageSignedUrls.data?.[d.image_storage_path!] ?? "" }))
+    setLightbox({ images, index: clickedIndex })
+  }
+
+  function DishItemsSummary({ transaction }: { transaction: TransactionDetailed }) {
+    const items = getDishItems(transaction)
+    if (items.length === 0) return null
+
+    const itemsWithImages = items.filter((d) => d.image_storage_path)
+
+    return (
+      <div className="flex flex-col gap-1">
+        <span className="text-xs text-muted-foreground">
+          {items.map((d) => `${d.dish_name} ×${d.quantity}`).join(", ")}
+        </span>
+        {itemsWithImages.length > 0 && (
+          <div className="flex gap-1">
+            {itemsWithImages.slice(0, 2).map((d, i) => {
+              const url = dishImageSignedUrls.data?.[d.image_storage_path!]
+              return url ? (
+                <button
+                  key={d.id}
+                  type="button"
+                  onClick={() => openDishLightbox(transaction, i)}
+                  className="size-8 shrink-0 overflow-hidden rounded"
+                >
+                  <img src={url} alt="" className="size-full object-cover" />
+                </button>
+              ) : null
+            })}
+            {itemsWithImages.length > 2 && (
+              <button
+                type="button"
+                onClick={() => openDishLightbox(transaction, 2)}
+                className="flex size-8 shrink-0 items-center justify-center rounded bg-muted text-[10px]"
+              >
+                +{itemsWithImages.length - 2}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    )
   }
 
   function AttachmentThumbnails({ transaction }: { transaction: TransactionDetailed }) {
@@ -195,6 +263,10 @@ export function TransactionList({ transactions }: { transactions: TransactionDet
               </div>
             )}
 
+            <div className="mt-1">
+              <DishItemsSummary transaction={transaction} />
+            </div>
+
             {Array.isArray(transaction.tags) && transaction.tags.length > 0 && (
               <div className="mt-1.5 flex flex-wrap gap-1">
                 {(transaction.tags as unknown as TagSummary[]).map((tag) => (
@@ -241,6 +313,7 @@ export function TransactionList({ transactions }: { transactions: TransactionDet
                       <span className="font-medium text-foreground">{transaction.merchant}</span>
                     )}
                     <span className="truncate">{transaction.note || "—"}</span>
+                    <DishItemsSummary transaction={transaction} />
                     {Array.isArray(transaction.tags) && transaction.tags.length > 0 && (
                       <div className="flex flex-wrap gap-1">
                         {(transaction.tags as unknown as TagSummary[]).map((tag) => (
