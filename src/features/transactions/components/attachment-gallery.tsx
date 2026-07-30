@@ -106,7 +106,6 @@ export function AttachmentGallery({ transactionId }: { transactionId: string }) 
         ref={inputRef}
         type="file"
         accept="image/*"
-        capture="environment"
         multiple
         className="hidden"
         onChange={handleSelect}
