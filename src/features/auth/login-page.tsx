@@ -90,7 +90,20 @@ export function LoginPage() {
     <div className="flex min-h-svh items-center justify-center px-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>Expense Memory</CardTitle>
+          <div className="flex items-center gap-2">
+            <svg width="26" height="26" viewBox="0 0 56 56" fill="none" aria-hidden="true">
+              <rect width="56" height="56" rx="13" fill="#211C15" />
+              <line x1="28" y1="10" x2="28" y2="46" stroke="#D9A257" strokeWidth="3" strokeLinecap="round" />
+              <path d="M28 17 L19 10 M28 17 L37 10" stroke="#D9A257" strokeWidth="3" strokeLinecap="round" />
+              <path d="M28 25 L18 17 M28 25 L38 17" stroke="#D9A257" strokeWidth="3" strokeLinecap="round" />
+              <path d="M28 33 L18 25 M28 33 L38 25" stroke="#D9A257" strokeWidth="3" strokeLinecap="round" />
+              <circle cx="28" cy="10" r="3" fill="#D9A257" />
+            </svg>
+            <CardTitle className="font-heading">Flovepal DJ</CardTitle>
+          </div>
+          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+            Decision Jenome
+          </p>
           <CardDescription>
             {mode === "sign-in"
               ? "Sign in to see your wallets and transactions."

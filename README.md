@@ -1,4 +1,4 @@
-# Expense Memory
+# Flovepal DJ — Decision Jenome
 
 A transaction-tracking app with a dynamic, per-category question system —
 built as a standalone module intended to be embedded into **Flovepal Grove**

@@ -49,72 +49,75 @@
 }
 
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
+    /* Flovepal DJ — Decision Jenome. Ink/Paper ledger ground, Crust (dough)
+       and Fern (journal/growth) accents, Clay standing in for spend instead
+       of a generic red. */
+    --background: #f1ece2;
+    --foreground: #211c15;
+    --card: #ffffff;
+    --card-foreground: #211c15;
+    --popover: #ffffff;
+    --popover-foreground: #211c15;
+    --primary: #211c15;
+    --primary-foreground: #f1ece2;
+    --secondary: #e7e0d2;
+    --secondary-foreground: #211c15;
+    --muted: #e7e0d2;
+    --muted-foreground: #6b6455;
+    --accent: #e7e0d2;
+    --accent-foreground: #211c15;
+    --destructive: #b34b34;
+    --border: #d8cfbd;
+    --input: #d8cfbd;
+    --ring: #bd8130;
+    --chart-1: #bd8130;
+    --chart-2: #3e6b52;
+    --chart-3: #a14b36;
+    --chart-4: #d9a257;
+    --chart-5: #6c9a80;
     --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
+    --sidebar: #f1ece2;
+    --sidebar-foreground: #211c15;
+    --sidebar-primary: #211c15;
+    --sidebar-primary-foreground: #f1ece2;
+    --sidebar-accent: #e7e0d2;
+    --sidebar-accent-foreground: #211c15;
+    --sidebar-border: #d8cfbd;
+    --sidebar-ring: #bd8130;
 }
 
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
+    --background: #211c15;
+    --foreground: #f1ece2;
+    --card: #2a251d;
+    --card-foreground: #f1ece2;
+    --popover: #2a251d;
+    --popover-foreground: #f1ece2;
+    --primary: #f1ece2;
+    --primary-foreground: #211c15;
+    --secondary: #3a3227;
+    --secondary-foreground: #f1ece2;
+    --muted: #3a3227;
+    --muted-foreground: #b8ae9c;
+    --accent: #3a3227;
+    --accent-foreground: #f1ece2;
+    --destructive: #c96e56;
+    --border: #4a4032;
+    --input: #4a4032;
+    --ring: #d9a257;
+    --chart-1: #d9a257;
+    --chart-2: #6c9a80;
+    --chart-3: #c96e56;
+    --chart-4: #bd8130;
+    --chart-5: #3e6b52;
+    --sidebar: #211c15;
+    --sidebar-foreground: #f1ece2;
+    --sidebar-primary: #d9a257;
+    --sidebar-primary-foreground: #211c15;
+    --sidebar-accent: #3a3227;
+    --sidebar-accent-foreground: #f1ece2;
+    --sidebar-border: #4a4032;
+    --sidebar-ring: #d9a257;
 }
 
 @layer base {
