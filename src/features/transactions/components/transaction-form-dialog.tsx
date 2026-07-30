@@ -37,14 +37,19 @@ import { useTags } from "@/features/tags/hooks/use-tags"
 import {
   useCreateTransaction,
   useUpdateTransaction,
+  useMerchants,
 } from "@/features/transactions/hooks/use-transactions"
+import { useUploadAttachment } from "@/features/transactions/hooks/use-attachments"
 import { transactionFormSchema, type TransactionFormValues } from "@/features/transactions/schemas"
 import {
   DynamicQuestionField,
   type AnswerValue,
 } from "@/features/transactions/components/dynamic-question-field"
-import { TRANSACTION_TYPES } from "@/types/enums"
+import { AttachmentPicker } from "@/features/transactions/components/attachment-picker"
+import { AttachmentGallery } from "@/features/transactions/components/attachment-gallery"
+import { TRANSACTION_RECORD_TYPES, TRANSACTION_RECORD_TYPE_LABELS } from "@/types/enums"
 import type { TransactionDetailed } from "@/services/repositories/transactions.repository"
+import { useAuth } from "@/hooks/use-auth"
 import { cn } from "@/lib/utils"
 import { toast } from "@/lib/toast"
 
@@ -73,13 +78,16 @@ export function TransactionFormDialog({
   const [open, setOpen] = React.useState(false)
   const [answers, setAnswers] = React.useState<Record<string, AnswerValue>>({})
   const [tagIds, setTagIds] = React.useState<string[]>([])
+  const [pendingFiles, setPendingFiles] = React.useState<File[]>([])
 
   const isEditing = !!transaction
 
+  const { user } = useAuth()
   const wallets = useWallets()
   const tags = useTags()
   const createTransaction = useCreateTransaction()
   const updateTransaction = useUpdateTransaction()
+  const uploadAttachment = useUploadAttachment()
 
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionFormSchema),
@@ -88,6 +96,8 @@ export function TransactionFormDialog({
       transaction_type: "expense",
       category_id: "",
       subcategory_id: "",
+      to_wallet_id: "",
+      merchant: "",
       amount: 0,
       occurred_at: new Date().toISOString().slice(0, 10),
       note: "",
@@ -97,10 +107,26 @@ export function TransactionFormDialog({
   const transactionType = form.watch("transaction_type")
   const categoryId = form.watch("category_id")
   const subcategoryId = form.watch("subcategory_id")
+  const walletId = form.watch("wallet_id")
 
-  const categories = useCategories(transactionType)
+  const isTransfer = transactionType === "transfer"
+
+  // TRANSACTION_RECORD_TYPES includes 'transfer', but categories only ever
+  // exist for income/expense — pass undefined (all) rather than a type the
+  // categories table can never have. Checking transactionType directly
+  // (not the isTransfer bool) lets TS narrow the else branch to
+  // "income" | "expense".
+  const categories = useCategories(transactionType === "transfer" ? undefined : transactionType)
   const subcategories = useSubcategories(categoryId || undefined)
   const questions = useQuestionsForTransactionContext(categoryId || undefined, subcategoryId)
+
+  const merchants = useMerchants()
+  const showAttachments = !isTransfer
+
+  const sourceWallet = wallets.data?.find((w) => w.id === walletId)
+  const destinationWalletOptions = (wallets.data ?? []).filter(
+    (w) => w.id !== walletId && (!sourceWallet || w.currency_id === sourceWallet.currency_id)
+  )
 
   React.useEffect(() => {
     if (!open) return
@@ -111,6 +137,8 @@ export function TransactionFormDialog({
         transaction_type: transaction.transaction_type as TransactionFormValues["transaction_type"],
         category_id: transaction.category_id ?? "",
         subcategory_id: transaction.subcategory_id ?? "",
+        to_wallet_id: transaction.to_wallet_id ?? "",
+        merchant: transaction.merchant ?? "",
         amount: transaction.amount ?? 0,
         occurred_at: transaction.occurred_at ? toDateInputValue(transaction.occurred_at) : "",
         note: transaction.note ?? "",
@@ -140,12 +168,15 @@ export function TransactionFormDialog({
         transaction_type: "expense",
         category_id: "",
         subcategory_id: "",
+        to_wallet_id: "",
+        merchant: "",
         amount: 0,
         occurred_at: new Date().toISOString().slice(0, 10),
         note: "",
       })
       setAnswers({})
       setTagIds([])
+      setPendingFiles([])
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, transaction?.id])
@@ -154,7 +185,9 @@ export function TransactionFormDialog({
     form.setValue("transaction_type", nextType)
     form.setValue("category_id", "")
     form.setValue("subcategory_id", "")
+    form.setValue("to_wallet_id", "")
     setAnswers({})
+    setPendingFiles([])
   }
 
   function handleCategoryChange(nextCategoryId: string | null) {
@@ -183,28 +216,53 @@ export function TransactionFormDialog({
       return
     }
 
+    const isTransferSubmit = values.transaction_type === "transfer"
+
     const input = {
       wallet_id: values.wallet_id,
-      category_id: values.category_id,
-      subcategory_id: values.subcategory_id || null,
+      category_id: isTransferSubmit ? null : values.category_id || null,
+      subcategory_id: isTransferSubmit ? null : values.subcategory_id || null,
       transaction_type: values.transaction_type,
+      to_wallet_id: isTransferSubmit ? values.to_wallet_id || null : null,
+      merchant: isTransferSubmit ? null : values.merchant || null,
       amount: values.amount,
       occurred_at: new Date(values.occurred_at).toISOString(),
       note: values.note || null,
-      answers: (questions.data ?? [])
-        .filter((q) => answers[q.id])
-        .map((q) => ({ question_id: q.id, ...answers[q.id] })),
+      answers: isTransferSubmit
+        ? []
+        : (questions.data ?? [])
+            .filter((q) => answers[q.id])
+            .map((q) => ({ question_id: q.id, ...answers[q.id] })),
       tag_ids: tagIds,
     }
 
     try {
+      let savedId: string
       if (isEditing) {
-        await updateTransaction.mutateAsync({ id: transaction.id!, input })
+        const saved = await updateTransaction.mutateAsync({ id: transaction.id!, input })
+        savedId = saved.id
         toast.success("Transaction updated")
       } else {
-        await createTransaction.mutateAsync(input)
+        const saved = await createTransaction.mutateAsync(input)
+        savedId = saved.id
         toast.success("Transaction recorded")
       }
+
+      if (pendingFiles.length > 0 && user) {
+        const results = await Promise.allSettled(
+          pendingFiles.map((file) =>
+            uploadAttachment.mutateAsync({ transactionId: savedId, userId: user.id, file })
+          )
+        )
+        const failedCount = results.filter((r) => r.status === "rejected").length
+        if (failedCount > 0) {
+          toast.error(
+            undefined,
+            `Transaction saved, but ${failedCount} photo${failedCount > 1 ? "s" : ""} failed to upload`
+          )
+        }
+      }
+
       setOpen(false)
     } catch (error) {
       toast.error(error, "Couldn't save transaction")
@@ -222,16 +280,15 @@ export function TransactionFormDialog({
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
-            <div className="grid grid-cols-2 gap-2">
-              {TRANSACTION_TYPES.map((type) => (
+            <div className="grid grid-cols-3 gap-2">
+              {TRANSACTION_RECORD_TYPES.map((type) => (
                 <Button
                   key={type}
                   type="button"
                   variant={transactionType === type ? "default" : "outline"}
                   onClick={() => handleTypeChange(type)}
-                  className="capitalize"
                 >
-                  {type}
+                  {TRANSACTION_RECORD_TYPE_LABELS[type]}
                 </Button>
               ))}
             </div>
@@ -267,68 +324,131 @@ export function TransactionFormDialog({
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="category_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Category</FormLabel>
-                  <Select
-                    items={Object.fromEntries(
-                      (categories.data ?? []).map((c) => [c.id, c.name])
-                    )}
-                    value={field.value}
-                    onValueChange={handleCategoryChange}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select a category" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {categories.data?.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {categoryId && (subcategories.data ?? []).length > 0 && (
+            {isTransfer ? (
               <FormField
                 control={form.control}
-                name="subcategory_id"
+                name="to_wallet_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Subcategory</FormLabel>
+                    <FormLabel>To wallet</FormLabel>
                     <Select
                       items={Object.fromEntries(
-                        (subcategories.data ?? []).map((s) => [s.id, s.name])
+                        destinationWalletOptions.map((w) => [w.id, w.name])
                       )}
                       value={field.value}
-                      onValueChange={handleSubcategoryChange}
+                      onValueChange={field.onChange}
+                      disabled={!walletId}
                     >
                       <FormControl>
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder="None" />
+                          <SelectValue
+                            placeholder={
+                              walletId ? "Select a wallet" : "Select a source wallet first"
+                            }
+                          />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {subcategories.data?.map((subcategory) => (
-                          <SelectItem key={subcategory.id} value={subcategory.id}>
-                            {subcategory.name}
+                        {destinationWalletOptions.map((wallet) => (
+                          <SelectItem key={wallet.id} value={wallet.id}>
+                            {wallet.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                    {walletId && destinationWalletOptions.length === 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        No other wallet shares this wallet's currency — transfers are
+                        same-currency only for now.
+                      </p>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
               />
+            ) : (
+              <>
+                <FormField
+                  control={form.control}
+                  name="category_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Category</FormLabel>
+                      <Select
+                        items={Object.fromEntries(
+                          (categories.data ?? []).map((c) => [c.id, c.name])
+                        )}
+                        value={field.value}
+                        onValueChange={handleCategoryChange}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select a category" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {categories.data?.map((category) => (
+                            <SelectItem key={category.id} value={category.id}>
+                              {category.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {categoryId && (subcategories.data ?? []).length > 0 && (
+                  <FormField
+                    control={form.control}
+                    name="subcategory_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Subcategory</FormLabel>
+                        <Select
+                          items={Object.fromEntries(
+                            (subcategories.data ?? []).map((s) => [s.id, s.name])
+                          )}
+                          value={field.value}
+                          onValueChange={handleSubcategoryChange}
+                        >
+                          <FormControl>
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="None" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {subcategories.data?.map((subcategory) => (
+                              <SelectItem key={subcategory.id} value={subcategory.id}>
+                                {subcategory.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                <FormField
+                  control={form.control}
+                  name="merchant"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Shop / merchant (optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. 7-Eleven" list="merchant-options" {...field} />
+                      </FormControl>
+                      <datalist id="merchant-options">
+                        {merchants.data?.map((name) => <option key={name} value={name} />)}
+                      </datalist>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </>
             )}
 
             <div className="grid grid-cols-2 gap-4">
@@ -411,6 +531,13 @@ export function TransactionFormDialog({
                 ))}
               </div>
             )}
+
+            {showAttachments &&
+              (isEditing && transaction ? (
+                <AttachmentGallery transactionId={transaction.id!} />
+              ) : (
+                <AttachmentPicker files={pendingFiles} onChange={setPendingFiles} />
+              ))}
 
             <DialogFooter>
               <Button type="submit" disabled={isSubmitting}>

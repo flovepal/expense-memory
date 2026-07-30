@@ -20,21 +20,22 @@ insert into public.currencies (code, name, symbol, decimal_digits) values
   ('AUD', 'Australian Dollar', 'A$', 2),
   ('CAD', 'Canadian Dollar', 'C$', 2),
   ('SGD', 'Singapore Dollar', 'S$', 2),
-  ('CNY', 'Chinese Yuan', '¥', 2)
+  ('CNY', 'Chinese Yuan', '¥', 2),
+  ('TWD', 'New Taiwan Dollar', 'NT$', 2)
 on conflict (code) do nothing;
 
 -- ---------------------------------------------------------------------------
 -- Default expense categories + subcategories
 -- ---------------------------------------------------------------------------
 with expense_categories as (
-  insert into public.categories (name, icon, color, transaction_type, display_order) values
-    ('Food', 'utensils', '#f97316', 'expense', 1),
-    ('Transport', 'car', '#3b82f6', 'expense', 2),
-    ('Housing', 'home', '#8b5cf6', 'expense', 3),
-    ('Entertainment', 'clapperboard', '#ec4899', 'expense', 4),
-    ('Health', 'heart-pulse', '#ef4444', 'expense', 5),
-    ('Shopping', 'shopping-bag', '#14b8a6', 'expense', 6),
-    ('Other', 'ellipsis', '#6b7280', 'expense', 7)
+  insert into public.categories (name, icon, color, transaction_type, display_order, suggests_attachment) values
+    ('Food', 'utensils', '#f97316', 'expense', 1, false),
+    ('Transport', 'car', '#3b82f6', 'expense', 2, false),
+    ('Housing', 'home', '#8b5cf6', 'expense', 3, false),
+    ('Entertainment', 'clapperboard', '#ec4899', 'expense', 4, false),
+    ('Health', 'heart-pulse', '#ef4444', 'expense', 5, false),
+    ('Shopping', 'shopping-bag', '#14b8a6', 'expense', 6, true),
+    ('Other', 'ellipsis', '#6b7280', 'expense', 7, false)
   returning id, name
 )
 insert into public.subcategories (category_id, name, icon, display_order)

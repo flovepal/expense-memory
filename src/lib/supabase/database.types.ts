@@ -49,6 +49,7 @@ export type Database = {
           id: string
           is_archived: boolean
           name: string
+          suggests_attachment: boolean
           transaction_type: string
           updated_at: string
           user_id: string | null
@@ -62,6 +63,7 @@ export type Database = {
           id?: string
           is_archived?: boolean
           name: string
+          suggests_attachment?: boolean
           transaction_type: string
           updated_at?: string
           user_id?: string | null
@@ -75,6 +77,7 @@ export type Database = {
           id?: string
           is_archived?: boolean
           name?: string
+          suggests_attachment?: boolean
           transaction_type?: string
           updated_at?: string
           user_id?: string | null
@@ -401,6 +404,54 @@ export type Database = {
           },
         ]
       }
+      transaction_attachments: {
+        Row: {
+          content_type: string | null
+          file_name: string | null
+          id: string
+          size_bytes: number | null
+          storage_path: string
+          transaction_id: string
+          uploaded_at: string
+          user_id: string
+        }
+        Insert: {
+          content_type?: string | null
+          file_name?: string | null
+          id?: string
+          size_bytes?: number | null
+          storage_path: string
+          transaction_id: string
+          uploaded_at?: string
+          user_id: string
+        }
+        Update: {
+          content_type?: string | null
+          file_name?: string | null
+          id?: string
+          size_bytes?: number | null
+          storage_path?: string
+          transaction_id?: string
+          uploaded_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transaction_attachments_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_attachments_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions_detailed"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transaction_tags: {
         Row: {
           created_at: string
@@ -444,13 +495,15 @@ export type Database = {
       transactions: {
         Row: {
           amount: number
-          category_id: string
+          category_id: string | null
           created_at: string
           deleted_at: string | null
           id: string
+          merchant: string | null
           note: string | null
           occurred_at: string
           subcategory_id: string | null
+          to_wallet_id: string | null
           transaction_type: string
           updated_at: string
           user_id: string
@@ -458,13 +511,15 @@ export type Database = {
         }
         Insert: {
           amount: number
-          category_id: string
+          category_id?: string | null
           created_at?: string
           deleted_at?: string | null
           id?: string
+          merchant?: string | null
           note?: string | null
           occurred_at?: string
           subcategory_id?: string | null
+          to_wallet_id?: string | null
           transaction_type: string
           updated_at?: string
           user_id?: string
@@ -472,13 +527,15 @@ export type Database = {
         }
         Update: {
           amount?: number
-          category_id?: string
+          category_id?: string | null
           created_at?: string
           deleted_at?: string | null
           id?: string
+          merchant?: string | null
           note?: string | null
           occurred_at?: string
           subcategory_id?: string | null
+          to_wallet_id?: string | null
           transaction_type?: string
           updated_at?: string
           user_id?: string
@@ -500,10 +557,38 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "transactions_to_wallet_id_fkey"
+            columns: ["to_wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallet_balances"
+            referencedColumns: ["wallet_id"]
+          },
+          {
+            foreignKeyName: "transactions_to_wallet_id_fkey"
+            columns: ["to_wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallet_monthly_summary"
+            referencedColumns: ["wallet_id"]
+          },
+          {
+            foreignKeyName: "transactions_to_wallet_id_fkey"
+            columns: ["to_wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallets"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "transactions_wallet_id_fkey"
             columns: ["wallet_id"]
             isOneToOne: false
             referencedRelation: "wallet_balances"
+            referencedColumns: ["wallet_id"]
+          },
+          {
+            foreignKeyName: "transactions_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallet_monthly_summary"
             referencedColumns: ["wallet_id"]
           },
           {
@@ -599,6 +684,7 @@ export type Database = {
         Row: {
           amount: number | null
           answers: Json | null
+          attachments: Json | null
           category_color: string | null
           category_icon: string | null
           category_id: string | null
@@ -608,11 +694,14 @@ export type Database = {
           currency_id: string | null
           currency_symbol: string | null
           id: string | null
+          merchant: string | null
           note: string | null
           occurred_at: string | null
           subcategory_id: string | null
           subcategory_name: string | null
           tags: Json | null
+          to_wallet_id: string | null
+          to_wallet_name: string | null
           transaction_type: string | null
           updated_at: string | null
           user_id: string | null
@@ -635,10 +724,38 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "transactions_to_wallet_id_fkey"
+            columns: ["to_wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallet_balances"
+            referencedColumns: ["wallet_id"]
+          },
+          {
+            foreignKeyName: "transactions_to_wallet_id_fkey"
+            columns: ["to_wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallet_monthly_summary"
+            referencedColumns: ["wallet_id"]
+          },
+          {
+            foreignKeyName: "transactions_to_wallet_id_fkey"
+            columns: ["to_wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallets"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "transactions_wallet_id_fkey"
             columns: ["wallet_id"]
             isOneToOne: false
             referencedRelation: "wallet_balances"
+            referencedColumns: ["wallet_id"]
+          },
+          {
+            foreignKeyName: "transactions_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallet_monthly_summary"
             referencedColumns: ["wallet_id"]
           },
           {
@@ -667,6 +784,8 @@ export type Database = {
           deleted_at: string | null
           is_archived: boolean | null
           name: string | null
+          total_received: number | null
+          total_spent: number | null
           type: string | null
           user_id: string | null
           wallet_id: string | null
@@ -681,6 +800,16 @@ export type Database = {
           },
         ]
       }
+      wallet_monthly_summary: {
+        Row: {
+          month: string | null
+          total_received: number | null
+          total_spent: number | null
+          user_id: string | null
+          wallet_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       create_transaction: {
@@ -688,22 +817,26 @@ export type Database = {
           p_amount: number
           p_answers: Json
           p_category_id: string
+          p_merchant?: string
           p_note: string
           p_occurred_at: string
           p_subcategory_id: string
           p_tag_ids: string[]
+          p_to_wallet_id?: string
           p_transaction_type: string
           p_wallet_id: string
         }
         Returns: {
           amount: number
-          category_id: string
+          category_id: string | null
           created_at: string
           deleted_at: string | null
           id: string
+          merchant: string | null
           note: string | null
           occurred_at: string
           subcategory_id: string | null
+          to_wallet_id: string | null
           transaction_type: string
           updated_at: string
           user_id: string
@@ -721,23 +854,27 @@ export type Database = {
           p_amount: number
           p_answers: Json
           p_category_id: string
+          p_merchant?: string
           p_note: string
           p_occurred_at: string
           p_subcategory_id: string
           p_tag_ids: string[]
+          p_to_wallet_id?: string
           p_transaction_id: string
           p_transaction_type: string
           p_wallet_id: string
         }
         Returns: {
           amount: number
-          category_id: string
+          category_id: string | null
           created_at: string
           deleted_at: string | null
           id: string
+          merchant: string | null
           note: string | null
           occurred_at: string
           subcategory_id: string | null
+          to_wallet_id: string | null
           transaction_type: string
           updated_at: string
           user_id: string

@@ -13,6 +13,7 @@ export const transactionKeys = {
   lists: () => [...transactionKeys.all, "list"] as const,
   list: (filters: TransactionListFilters) => [...transactionKeys.lists(), filters] as const,
   detail: (id: string) => [...transactionKeys.all, "detail", id] as const,
+  merchants: () => [...transactionKeys.all, "merchants"] as const,
 }
 
 export function useTransactions(filters: TransactionListFilters = {}) {
@@ -27,6 +28,14 @@ export function useTransaction(id: string | undefined) {
     queryKey: transactionKeys.detail(id ?? ""),
     queryFn: () => transactionsRepository.get(id!),
     enabled: !!id,
+  })
+}
+
+/** Merchant names used in past transactions, for the merchant field's autocomplete. Invalidated automatically whenever a transaction is created/updated (it's covered by transactionKeys.all). */
+export function useMerchants() {
+  return useQuery({
+    queryKey: transactionKeys.merchants(),
+    queryFn: () => transactionsRepository.listMerchants(),
   })
 }
 

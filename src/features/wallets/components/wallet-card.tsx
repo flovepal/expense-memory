@@ -1,3 +1,4 @@
+import * as React from "react"
 import { MoreVertical, Pencil, Archive, ArchiveRestore, Trash2 } from "lucide-react"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -18,7 +19,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { WalletFormDialog } from "@/features/wallets/components/wallet-form-dialog"
 import { useDeleteWallet, useSetWalletArchived } from "@/features/wallets/hooks/use-wallets"
@@ -28,6 +28,8 @@ import { toast } from "@/lib/toast"
 import type { Wallet, WalletBalance } from "@/services/repositories/wallets.repository"
 
 export function WalletCard({ wallet, balance }: { wallet: Wallet; balance?: WalletBalance }) {
+  const [editOpen, setEditOpen] = React.useState(false)
+  const [deleteOpen, setDeleteOpen] = React.useState(false)
   const setArchived = useSetWalletArchived()
   const deleteWallet = useDeleteWallet()
 
@@ -44,6 +46,7 @@ export function WalletCard({ wallet, balance }: { wallet: Wallet; balance?: Wall
     try {
       await deleteWallet.mutateAsync(wallet.id)
       toast.success("Wallet deleted")
+      setDeleteOpen(false)
     } catch (error) {
       toast.error(error, "Couldn't delete wallet")
     }
@@ -67,16 +70,11 @@ export function WalletCard({ wallet, balance }: { wallet: Wallet; balance?: Wall
             }
           />
           <DropdownMenuContent align="end">
-            <WalletFormDialog
-              wallet={wallet}
-              trigger={
-                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                  <Pencil className="size-4" />
-                  Edit
-                </DropdownMenuItem>
-              }
-            />
-            <DropdownMenuItem onSelect={handleToggleArchive}>
+            <DropdownMenuItem onClick={() => setEditOpen(true)}>
+              <Pencil className="size-4" />
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleToggleArchive}>
               {wallet.is_archived ? (
                 <>
                   <ArchiveRestore className="size-4" />
@@ -89,34 +87,28 @@ export function WalletCard({ wallet, balance }: { wallet: Wallet; balance?: Wall
                 </>
               )}
             </DropdownMenuItem>
-            <AlertDialog>
-              <AlertDialogTrigger
-                render={
-                  <DropdownMenuItem
-                    variant="destructive"
-                    onSelect={(e) => e.preventDefault()}
-                  >
-                    <Trash2 className="size-4" />
-                    Delete
-                  </DropdownMenuItem>
-                }
-              />
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete "{wallet.name}"?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This hides the wallet and its transactions from your lists. This can't be
-                    undone from the UI.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
+              <Trash2 className="size-4" />
+              Delete
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        <WalletFormDialog wallet={wallet} open={editOpen} onOpenChange={setEditOpen} />
+        <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete "{wallet.name}"?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This hides the wallet and its transactions from your lists. This can't be
+                undone from the UI.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardHeader>
       <CardContent>
         <p className="text-2xl font-semibold tabular-nums">

@@ -2,7 +2,7 @@ import { supabase } from "@/lib/supabase/client"
 import { unwrap, unwrapVoid } from "@/lib/supabase/errors"
 import type { Database } from "@/lib/supabase/database.types"
 import type { Tables, Views } from "@/types/database"
-import type { AnswerType, TransactionType } from "@/types/enums"
+import type { AnswerType, TransactionRecordType } from "@/types/enums"
 
 // supabase gen types marks every RPC parameter as required non-null, which
 // doesn't reflect that p_subcategory_id/p_occurred_at/p_note are legitimately
@@ -10,7 +10,13 @@ import type { AnswerType, TransactionType } from "@/types/enums"
 // the call site) is simpler than restructuring the SQL just to satisfy the
 // generator.
 type NullableRpcArgs<Args, K extends keyof Args> = Omit<Args, K> & Record<K, string | null>
-type NullableTransactionArgKeys = "p_subcategory_id" | "p_occurred_at" | "p_note"
+type NullableTransactionArgKeys =
+  | "p_category_id"
+  | "p_subcategory_id"
+  | "p_occurred_at"
+  | "p_note"
+  | "p_to_wallet_id"
+  | "p_merchant"
 type CreateTransactionArgs = NullableRpcArgs<
   Database["public"]["Functions"]["create_transaction"]["Args"],
   NullableTransactionArgKeys
@@ -36,20 +42,22 @@ export type TransactionAnswerInput = {
 
 export type TransactionWriteInput = {
   wallet_id: string
-  category_id: string
+  category_id?: string | null
   subcategory_id?: string | null
-  transaction_type: TransactionType
+  transaction_type: TransactionRecordType
   amount: number
   occurred_at?: string | null
   note?: string | null
   answers?: TransactionAnswerInput[]
   tag_ids?: string[]
+  to_wallet_id?: string | null
+  merchant?: string | null
 }
 
 export type TransactionListFilters = {
   walletId?: string
   categoryId?: string
-  transactionType?: TransactionType
+  transactionType?: TransactionRecordType
   from?: string
   to?: string
   limit?: number
@@ -65,7 +73,10 @@ export class TransactionsRepository {
     if (filters.from) query = query.gte("occurred_at", filters.from)
     if (filters.to) query = query.lte("occurred_at", filters.to)
 
-    query = query.order("occurred_at", { ascending: false }).limit(filters.limit ?? 100)
+    query = query
+      .order("occurred_at", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(filters.limit ?? 100)
 
     return unwrap(query)
   }
@@ -79,7 +90,7 @@ export class TransactionsRepository {
   async create(input: TransactionWriteInput): Promise<Transaction> {
     const args: CreateTransactionArgs = {
       p_wallet_id: input.wallet_id,
-      p_category_id: input.category_id,
+      p_category_id: input.category_id ?? null,
       p_subcategory_id: input.subcategory_id ?? null,
       p_transaction_type: input.transaction_type,
       p_amount: input.amount,
@@ -87,6 +98,8 @@ export class TransactionsRepository {
       p_note: input.note ?? null,
       p_answers: (input.answers ?? []).map(toAnswerRow),
       p_tag_ids: input.tag_ids ?? [],
+      p_to_wallet_id: input.to_wallet_id ?? null,
+      p_merchant: input.merchant ?? null,
     }
     return unwrap(
       supabase.rpc(
@@ -100,7 +113,7 @@ export class TransactionsRepository {
     const args: UpdateTransactionArgs = {
       p_transaction_id: id,
       p_wallet_id: input.wallet_id,
-      p_category_id: input.category_id,
+      p_category_id: input.category_id ?? null,
       p_subcategory_id: input.subcategory_id ?? null,
       p_transaction_type: input.transaction_type,
       p_amount: input.amount,
@@ -108,6 +121,8 @@ export class TransactionsRepository {
       p_note: input.note ?? null,
       p_answers: (input.answers ?? []).map(toAnswerRow),
       p_tag_ids: input.tag_ids ?? [],
+      p_to_wallet_id: input.to_wallet_id ?? null,
+      p_merchant: input.merchant ?? null,
     }
     return unwrap(
       supabase.rpc(
@@ -124,6 +139,14 @@ export class TransactionsRepository {
         .update({ deleted_at: new Date().toISOString() })
         .eq("id", id)
     )
+  }
+
+  /** Distinct merchant names the user has entered before, for the merchant field's autocomplete. Newly-typed names show up here automatically once the transaction that used them is saved — no separate table to maintain. */
+  async listMerchants(): Promise<string[]> {
+    const rows = await unwrap<{ merchant: string | null }[]>(
+      supabase.from("transactions").select("merchant").not("merchant", "is", null)
+    )
+    return Array.from(new Set(rows.map((r) => r.merchant).filter((m): m is string => !!m))).sort()
   }
 }
 

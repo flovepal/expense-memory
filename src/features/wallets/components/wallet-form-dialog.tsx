@@ -38,11 +38,22 @@ import { toast } from "@/lib/toast"
 export function WalletFormDialog({
   wallet,
   trigger,
+  open: openProp,
+  onOpenChange: onOpenChangeProp,
 }: {
   wallet?: Wallet
-  trigger: React.ReactElement
+  // Uncontrolled (trigger renders its own opener, e.g. "New Wallet") when
+  // trigger is given. Controlled (parent owns open state) when it isn't —
+  // needed when the opener lives inside a DropdownMenu, where nesting a
+  // Dialog trigger directly inside a Menu item is unreliable: the menu can
+  // swallow the click before the dialog's own trigger handler runs.
+  trigger?: React.ReactElement
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }) {
-  const [open, setOpen] = React.useState(false)
+  const [internalOpen, setInternalOpen] = React.useState(false)
+  const open = trigger ? internalOpen : (openProp ?? false)
+  const setOpen = trigger ? setInternalOpen : (onOpenChangeProp ?? (() => {}))
   const { data: currencies } = useCurrencies()
   const createWallet = useCreateWallet()
   const updateWallet = useUpdateWallet()
@@ -81,7 +92,7 @@ export function WalletFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={trigger} />
+      {trigger && <DialogTrigger render={trigger} />}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{isEditing ? "Edit wallet" : "New wallet"}</DialogTitle>

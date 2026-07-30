@@ -3,6 +3,7 @@ import { unwrap } from "@/lib/supabase/errors"
 import type { Views } from "@/types/database"
 
 export type MonthlyCategorySummary = Views<"monthly_category_summary">
+export type WalletMonthlySummary = Views<"wallet_monthly_summary">
 
 export class DashboardRepository {
   /** Category totals for a given month (first-of-month date, e.g. "2026-07-01"). */
@@ -13,6 +14,13 @@ export class DashboardRepository {
         .select("*")
         .eq("month", month)
         .order("total_amount", { ascending: false })
+    )
+  }
+
+  /** Per-wallet received/spent totals for a given month (first-of-month date). */
+  async walletMonthlySummary(month: string): Promise<WalletMonthlySummary[]> {
+    return unwrap(
+      supabase.from("wallet_monthly_summary").select("*").eq("month", month)
     )
   }
 }

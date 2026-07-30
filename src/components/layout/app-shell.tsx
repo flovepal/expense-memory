@@ -10,7 +10,6 @@ import {
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import { Toaster } from "@/components/ui/sonner"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/use-auth"
 import { supabase } from "@/lib/supabase/client"
@@ -64,7 +63,6 @@ export function AppShell() {
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6">
         <Outlet />
       </main>
-      <Toaster />
     </div>
   )
 }

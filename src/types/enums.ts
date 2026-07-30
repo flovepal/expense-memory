@@ -16,6 +16,18 @@ export type WalletType = (typeof WALLET_TYPES)[number]
 export const TRANSACTION_TYPES = ["income", "expense"] as const
 export type TransactionType = (typeof TRANSACTION_TYPES)[number]
 
+// Categories are only ever income/expense (a transfer has no category), so
+// TRANSACTION_TYPES above stays narrow for that use. Transaction *records*
+// can additionally be 'transfer', hence this separate, wider type.
+export const TRANSACTION_RECORD_TYPES = [...TRANSACTION_TYPES, "transfer"] as const
+export type TransactionRecordType = (typeof TRANSACTION_RECORD_TYPES)[number]
+
+export const TRANSACTION_RECORD_TYPE_LABELS: Record<TransactionRecordType, string> = {
+  income: "Income",
+  expense: "Expense",
+  transfer: "Transfer",
+}
+
 export const ANSWER_TYPES = [
   "text",
   "number",

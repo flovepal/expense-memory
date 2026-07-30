@@ -45,7 +45,7 @@ export function DashboardPage() {
         </div>
       </div>
 
-      <WalletBalanceSummary />
+      <WalletBalanceSummary month={month} />
 
       <Tabs defaultValue="expense">
         <TabsList>
