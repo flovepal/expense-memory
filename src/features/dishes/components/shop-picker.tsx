@@ -51,9 +51,9 @@ export function ShopPicker({
         render={
           <Button type="button" variant="outline" className="w-full justify-between font-normal">
             {value ? (
-              <span className="truncate">{value.name}</span>
+              <span className="min-w-0 flex-1 truncate text-left">{value.name}</span>
             ) : (
-              <span className="text-muted-foreground">Select a shop</span>
+              <span className="min-w-0 flex-1 truncate text-left text-muted-foreground">Select a shop</span>
             )}
             <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />
           </Button>
@@ -90,7 +90,7 @@ export function ShopPicker({
                 value?.id === shop.id && "bg-accent"
               )}
             >
-              <span className="truncate">{shop.name}</span>
+              <span className="min-w-0 flex-1 truncate">{shop.name}</span>
               {value?.id === shop.id && <Check className="size-3.5 shrink-0" />}
             </button>
           ))}

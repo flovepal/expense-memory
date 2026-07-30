@@ -158,11 +158,11 @@ export function FoodLogList({ entries }: { entries: FoodLogEntry[] }) {
         {entries.map((entry) => (
           <div key={entry.id} className="rounded-lg border p-3">
             <div className="flex items-start justify-between gap-2">
-              <div className="flex items-start gap-2">
+              <div className="flex min-w-0 flex-1 items-start gap-2">
                 <PhotoThumbnail entry={entry} />
-                <div className="flex flex-col gap-0.5">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-medium">{entry.food_name}</span>
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <span className="truncate font-medium">{entry.food_name}</span>
                     {entry.transaction_id && (
                       <LinkIcon className="size-3 text-muted-foreground" aria-label="Linked to a transaction" />
                     )}
@@ -219,9 +219,9 @@ export function FoodLogList({ entries }: { entries: FoodLogEntry[] }) {
                 <TableCell className="max-w-56">
                   <div className="flex items-center gap-2">
                     <PhotoThumbnail entry={entry} />
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-medium">{entry.food_name}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex min-w-0 items-center gap-1.5">
+                        <span className="truncate font-medium">{entry.food_name}</span>
                         {entry.transaction_id && (
                           <LinkIcon className="size-3 shrink-0 text-muted-foreground" aria-label="Linked to a transaction" />
                         )}

@@ -9,6 +9,7 @@ export type TastePromptDish = {
   unit_price: number
   currency_code: string
   shop_name?: string | null
+  image_storage_path?: string | null
 }
 
 /** Shown after saving a Food transaction with dishes — fully skippable, one tap per dish opens the existing Food Log questionnaire pre-filled from that dish. */
@@ -29,9 +30,9 @@ export function DishTastePromptDialog({
         </DialogHeader>
         <div className="grid gap-2">
           {dishes.map((dish) => (
-            <div key={dish.dish_id} className="flex items-center justify-between rounded-md border p-2">
-              <div className="flex flex-col">
-                <span className="text-sm font-medium">{dish.dish_name}</span>
+            <div key={dish.dish_id} className="flex min-w-0 items-center justify-between gap-2 rounded-md border p-2">
+              <div className="flex min-w-0 flex-1 flex-col">
+                <span className="truncate text-sm font-medium">{dish.dish_name}</span>
                 <span className="text-xs text-muted-foreground">
                   {formatCurrency(dish.unit_price, dish.currency_code)}
                 </span>
@@ -42,6 +43,7 @@ export function DishTastePromptDialog({
                   food_name: dish.dish_name,
                   price: dish.unit_price,
                   shop: dish.shop_name,
+                  image_storage_path: dish.image_storage_path,
                 }}
                 trigger={
                   <Button type="button" variant="outline" size="sm">

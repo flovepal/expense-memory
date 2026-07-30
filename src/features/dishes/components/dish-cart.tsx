@@ -27,8 +27,8 @@ export function DishCart({
   return (
     <div className="grid gap-2 rounded-md border p-2">
       {items.map((item) => (
-        <div key={item.key} className="flex items-center gap-2">
-          <span className="flex-1 truncate text-sm">{item.dish_name}</span>
+        <div key={item.key} className="flex min-w-0 items-center gap-2">
+          <span className="min-w-0 flex-1 truncate text-sm">{item.dish_name}</span>
           <div className="flex items-center gap-1">
             <Button
               type="button"

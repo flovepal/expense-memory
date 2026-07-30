@@ -50,11 +50,11 @@ export function TransactionPicker({
             className="w-full justify-between font-normal"
           >
             {value ? (
-              <span className="truncate">
+              <span className="min-w-0 flex-1 truncate text-left">
                 {value.merchant || value.category_name} · {formatCurrency(value.amount ?? 0, value.currency_code ?? "USD")} · {value.occurred_at ? formatDate(value.occurred_at) : ""}
               </span>
             ) : (
-              <span className="text-muted-foreground">Link a transaction (optional)</span>
+              <span className="min-w-0 flex-1 truncate text-left text-muted-foreground">Link a transaction (optional)</span>
             )}
             <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />
           </Button>
@@ -94,7 +94,7 @@ export function TransactionPicker({
                 value?.id === t.id && "bg-accent"
               )}
             >
-              <span className="flex flex-col truncate">
+              <span className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate font-medium">{t.merchant || t.category_name}</span>
                 <span className="truncate text-xs text-muted-foreground">
                   {t.occurred_at ? formatDate(t.occurred_at) : ""}

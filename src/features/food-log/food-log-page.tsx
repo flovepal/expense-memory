@@ -1,7 +1,8 @@
 import * as React from "react"
-import { Plus, UtensilsCrossed } from "lucide-react"
+import { Plus, Search, UtensilsCrossed } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { LoadingState } from "@/components/shared/loading-state"
 import { ErrorState } from "@/components/shared/error-state"
 import { EmptyState } from "@/components/shared/empty-state"
@@ -22,6 +23,9 @@ const ALL = "__all__"
 export function FoodLogPage() {
   const [shopFilter, setShopFilter] = React.useState<string>("")
   const [dishCategoryFilter, setDishCategoryFilter] = React.useState<string>("")
+  const [search, setSearch] = React.useState("")
+  const [minCost, setMinCost] = React.useState("")
+  const [maxCost, setMaxCost] = React.useState("")
 
   const shops = useFoodLogShops()
   const dishCategories = useDishCategories()
@@ -29,6 +33,24 @@ export function FoodLogPage() {
     shop: shopFilter || undefined,
     dishCategoryId: dishCategoryFilter || undefined,
   })
+
+  const query = search.trim().toLowerCase()
+  const min = minCost ? Number(minCost) : undefined
+  const max = maxCost ? Number(maxCost) : undefined
+
+  const filteredEntries = (entries.data ?? []).filter((entry) => {
+    if (query) {
+      const matches =
+        entry.food_name.toLowerCase().includes(query) ||
+        (entry.shop ?? "").toLowerCase().includes(query)
+      if (!matches) return false
+    }
+    if (min != null && (entry.price == null || entry.price < min)) return false
+    if (max != null && (entry.price == null || entry.price > max)) return false
+    return true
+  })
+
+  const hasActiveFilters = !!(query || min != null || max != null)
 
   const newEntryButton = (
     <FoodLogFormDialog
@@ -48,14 +70,24 @@ export function FoodLogPage() {
         {newEntryButton}
       </div>
 
-      {(shops.data ?? []).length > 0 || (dishCategories.data ?? []).length > 0 ? (
-        <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative w-full sm:w-56">
+          <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search by name or shop..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-8"
+          />
+        </div>
+
+        {(shops.data ?? []).length > 0 && (
           <Select
             items={{ [ALL]: "All shops", ...Object.fromEntries((shops.data ?? []).map((s) => [s, s])) }}
             value={shopFilter || ALL}
             onValueChange={(v) => setShopFilter(!v || v === ALL ? "" : v)}
           >
-            <SelectTrigger className="w-44">
+            <SelectTrigger className="w-40">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -67,7 +99,9 @@ export function FoodLogPage() {
               ))}
             </SelectContent>
           </Select>
+        )}
 
+        {(dishCategories.data ?? []).length > 0 && (
           <Select
             items={{
               [ALL]: "All categories",
@@ -76,7 +110,7 @@ export function FoodLogPage() {
             value={dishCategoryFilter || ALL}
             onValueChange={(v) => setDishCategoryFilter(!v || v === ALL ? "" : v)}
           >
-            <SelectTrigger className="w-44">
+            <SelectTrigger className="w-40">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -88,8 +122,28 @@ export function FoodLogPage() {
               ))}
             </SelectContent>
           </Select>
+        )}
+
+        <div className="flex items-center gap-1.5">
+          <Input
+            type="number"
+            step="0.01"
+            placeholder="Min cost"
+            value={minCost}
+            onChange={(e) => setMinCost(e.target.value)}
+            className="w-24"
+          />
+          <span className="text-sm text-muted-foreground">–</span>
+          <Input
+            type="number"
+            step="0.01"
+            placeholder="Max cost"
+            value={maxCost}
+            onChange={(e) => setMaxCost(e.target.value)}
+            className="w-24"
+          />
         </div>
-      ) : null}
+      </div>
 
       {entries.isLoading && <LoadingState />}
       {entries.isError && (
@@ -103,7 +157,14 @@ export function FoodLogPage() {
           action={newEntryButton}
         />
       )}
-      {entries.isSuccess && entries.data.length > 0 && <FoodLogList entries={entries.data} />}
+      {entries.isSuccess && entries.data.length > 0 && filteredEntries.length === 0 && (
+        <EmptyState
+          icon={Search}
+          title="No entries match"
+          description={hasActiveFilters ? "Try a different search, shop, category, or cost range." : undefined}
+        />
+      )}
+      {filteredEntries.length > 0 && <FoodLogList entries={filteredEntries} />}
     </div>
   )
 }

@@ -396,6 +396,7 @@ export function TransactionFormDialog({
             unit_price: item.unit_price,
             currency_code: walletCurrencyCode ?? "USD",
             shop_name: shop?.name,
+            image_storage_path: item.image_storage_path,
           })),
         })
       }

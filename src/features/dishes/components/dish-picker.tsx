@@ -73,9 +73,9 @@ export function DishPicker({
         render={
           <Button type="button" variant="outline" className="w-full justify-between font-normal">
             {value ? (
-              <span className="truncate">{value.name}</span>
+              <span className="min-w-0 flex-1 truncate text-left">{value.name}</span>
             ) : (
-              <span className="text-muted-foreground">
+              <span className="min-w-0 flex-1 truncate text-left text-muted-foreground">
                 {shopId ? "Add dish" : "Link a dish (optional)"}
               </span>
             )}
@@ -114,7 +114,7 @@ export function DishPicker({
                     value?.id === dish.id && "bg-accent"
                   )}
                 >
-                  <span className="flex flex-col truncate">
+                  <span className="flex min-w-0 flex-1 flex-col">
                     <span className="truncate font-medium">{dish.name}</span>
                     {!shopId && dish.shop_id && shopById.get(dish.shop_id) && (
                       <span className="truncate text-xs text-muted-foreground">

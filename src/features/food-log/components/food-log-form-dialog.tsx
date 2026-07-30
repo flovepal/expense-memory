@@ -249,7 +249,7 @@ export function FoodLogFormDialog({
       transaction_id: linkedTransaction?.id ?? null,
       dish_id: linkedDish?.id ?? null,
       dish_category_id: linkedDish?.dish_category_id ?? null,
-      image_storage_path: linkedDish?.image_storage_path ?? null,
+      image_storage_path: linkedDish?.image_storage_path ?? prefill?.image_storage_path ?? null,
       shop: values.shop || null,
       price: values.price ?? null,
       currency_id: values.currency_id || null,
