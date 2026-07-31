@@ -49,7 +49,7 @@ export function useUpdateDish() {
 export function useDeleteDish() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (id: string) => dishesRepository.softDelete(id),
+    mutationFn: (id: string) => dishesRepository.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: dishKeys.lists() }),
   })
 }

@@ -7,10 +7,7 @@ export type QuestionOption = Tables<"question_options">
 export type QuestionWithOptions = Question & { question_options: QuestionOption[] }
 
 type QuestionInsert = TablesInsert<"questions">
-export type QuestionCreateInput = Omit<
-  QuestionInsert,
-  "id" | "user_id" | "created_at" | "updated_at" | "deleted_at"
->
+export type QuestionCreateInput = Omit<QuestionInsert, "id" | "user_id" | "created_at" | "updated_at">
 export type QuestionUpdateInput = Partial<QuestionCreateInput>
 
 type QuestionOptionInsert = TablesInsert<"question_options">
@@ -22,42 +19,26 @@ export type QuestionOptionCreateInput = Omit<
 const QUESTION_WITH_OPTIONS_SELECT = "*, question_options(*)"
 
 export class QuestionsRepository {
-  async listForCategory(categoryId: string): Promise<QuestionWithOptions[]> {
-    return unwrap(
-      supabase
-        .from("questions")
-        .select(QUESTION_WITH_OPTIONS_SELECT)
-        .eq("category_id", categoryId)
-        .eq("is_archived", false)
-        .is("deleted_at", null)
-        .order("display_order")
-    )
+  /** includeArchived: true for the management view (Settings) so an archived question stays visible with a restore option; false (default) for the transaction form, which should only ever offer active questions. */
+  async listForCategory(categoryId: string, includeArchived = false): Promise<QuestionWithOptions[]> {
+    let query = supabase
+      .from("questions")
+      .select(QUESTION_WITH_OPTIONS_SELECT)
+      .eq("category_id", categoryId)
+    if (!includeArchived) query = query.eq("is_archived", false)
+    return unwrap(query.order("display_order"))
   }
 
-  async listForSubcategory(subcategoryId: string): Promise<QuestionWithOptions[]> {
-    return unwrap(
-      supabase
-        .from("questions")
-        .select(QUESTION_WITH_OPTIONS_SELECT)
-        .eq("subcategory_id", subcategoryId)
-        .eq("is_archived", false)
-        .is("deleted_at", null)
-        .order("display_order")
-    )
-  }
-
-  /** All questions relevant to a transaction: its category's questions, plus its subcategory's questions (if any). */
-  async listForTransactionContext(
-    categoryId: string,
-    subcategoryId?: string | null
+  async listForSubcategory(
+    subcategoryId: string,
+    includeArchived = false
   ): Promise<QuestionWithOptions[]> {
-    const [categoryQuestions, subcategoryQuestions] = await Promise.all([
-      this.listForCategory(categoryId),
-      subcategoryId ? this.listForSubcategory(subcategoryId) : Promise.resolve([]),
-    ])
-    return [...categoryQuestions, ...subcategoryQuestions].sort(
-      (a, b) => a.display_order - b.display_order
-    )
+    let query = supabase
+      .from("questions")
+      .select(QUESTION_WITH_OPTIONS_SELECT)
+      .eq("subcategory_id", subcategoryId)
+    if (!includeArchived) query = query.eq("is_archived", false)
+    return unwrap(query.order("display_order"))
   }
 
   async create(input: QuestionCreateInput): Promise<Question> {
@@ -68,15 +49,13 @@ export class QuestionsRepository {
     return unwrap(supabase.from("questions").update(input).eq("id", id).select().single())
   }
 
-  async softDelete(id: string): Promise<Question> {
-    return unwrap(
-      supabase
-        .from("questions")
-        .update({ deleted_at: new Date().toISOString() })
-        .eq("id", id)
-        .select()
-        .single()
-    )
+  async setArchived(id: string, isArchived: boolean): Promise<Question> {
+    return this.update(id, { is_archived: isArchived })
+  }
+
+  /** Fails (FK RESTRICT) if any transaction has already answered this question — archive it instead. */
+  async delete(id: string): Promise<void> {
+    return unwrapVoid(supabase.from("questions").delete().eq("id", id))
   }
 
   async createOption(input: QuestionOptionCreateInput): Promise<QuestionOption> {

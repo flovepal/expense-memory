@@ -61,7 +61,7 @@ export function useEnsureFoodLogEntriesForDishes() {
 export function useDeleteFoodLogEntry() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (id: string) => foodLogRepository.softDelete(id),
+    mutationFn: (id: string) => foodLogRepository.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: foodLogKeys.lists() }),
   })
 }

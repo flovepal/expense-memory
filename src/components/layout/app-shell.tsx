@@ -3,8 +3,6 @@ import {
   LayoutDashboard,
   Receipt,
   Wallet as WalletIcon,
-  Tags,
-  FolderTree,
   UtensilsCrossed,
   Settings as SettingsIcon,
   LogOut,
@@ -19,8 +17,6 @@ const NAV_ITEMS = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/transactions", label: "Transactions", icon: Receipt },
   { to: "/wallets", label: "Wallets", icon: WalletIcon },
-  { to: "/categories", label: "Categories", icon: FolderTree },
-  { to: "/tags", label: "Tags", icon: Tags },
   { to: "/food-log", label: "Food Log", icon: UtensilsCrossed },
   { to: "/settings", label: "Settings", icon: SettingsIcon },
 ]

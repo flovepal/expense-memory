@@ -20,7 +20,7 @@ import { toast } from "@/lib/toast"
 
 export function CategoryItem({ category }: { category: Category }) {
   const subcategories = useSubcategories(category.id)
-  const questions = useQuestionsForCategory(category.id)
+  const questions = useQuestionsForCategory(category.id, true)
   const deleteCategory = useDeleteCategory()
   const isSystemCategory = category.user_id === null
 

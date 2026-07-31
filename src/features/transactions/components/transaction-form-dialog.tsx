@@ -13,7 +13,6 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
 import {
   Form,
@@ -33,22 +32,21 @@ import {
 import { useWallets } from "@/features/wallets/hooks/use-wallets"
 import { useCategories } from "@/features/categories/hooks/use-categories"
 import { useSubcategories } from "@/features/categories/hooks/use-subcategories"
-import { useQuestionsForTransactionContext } from "@/features/categories/hooks/use-questions"
-import { useTags } from "@/features/tags/hooks/use-tags"
+import {
+  useQuestionsForCategory,
+  useQuestionsForSubcategory,
+} from "@/features/categories/hooks/use-questions"
 import { useCurrencies } from "@/features/currencies/hooks/use-currencies"
 import {
   useCreateTransaction,
   useUpdateTransaction,
   useMerchants,
 } from "@/features/transactions/hooks/use-transactions"
-import { useUploadAttachment } from "@/features/transactions/hooks/use-attachments"
 import { transactionFormSchema, type TransactionFormValues } from "@/features/transactions/schemas"
 import {
   DynamicQuestionField,
   type AnswerValue,
 } from "@/features/transactions/components/dynamic-question-field"
-import { AttachmentPicker } from "@/features/transactions/components/attachment-picker"
-import { AttachmentGallery } from "@/features/transactions/components/attachment-gallery"
 import { ShopPicker } from "@/features/dishes/components/shop-picker"
 import { DishPicker } from "@/features/dishes/components/dish-picker"
 import { DishCart, cartTotal, type CartItem } from "@/features/dishes/components/dish-cart"
@@ -62,11 +60,8 @@ import type { TransactionDetailed } from "@/services/repositories/transactions.r
 import type { Dish } from "@/services/repositories/dishes.repository"
 import type { Shop } from "@/services/repositories/shops.repository"
 import type { FoodLogEntry } from "@/services/repositories/food-log.repository"
-import { useAuth } from "@/hooks/use-auth"
-import { cn } from "@/lib/utils"
 import { toast } from "@/lib/toast"
 
-type ExistingTag = { id: string; name: string; color: string | null }
 type ExistingAnswer = {
   question_id: string
   answer_text: string | null
@@ -98,8 +93,6 @@ export function TransactionFormDialog({
 }) {
   const [open, setOpen] = React.useState(false)
   const [answers, setAnswers] = React.useState<Record<string, AnswerValue>>({})
-  const [tagIds, setTagIds] = React.useState<string[]>([])
-  const [pendingFiles, setPendingFiles] = React.useState<File[]>([])
   const [shop, setShop] = React.useState<Shop | null>(null)
   const [dishCart, setDishCart] = React.useState<CartItem[]>([])
   const [amountManuallyEdited, setAmountManuallyEdited] = React.useState(false)
@@ -112,14 +105,11 @@ export function TransactionFormDialog({
 
   const isEditing = !!transaction
 
-  const { user } = useAuth()
   const wallets = useWallets()
-  const tags = useTags()
   const shops = useShops()
   const currencies = useCurrencies()
   const createTransaction = useCreateTransaction()
   const updateTransaction = useUpdateTransaction()
-  const uploadAttachment = useUploadAttachment()
   const createTransactionDishItems = useCreateTransactionDishItems()
   const ensureFoodLogEntries = useEnsureFoodLogEntriesForDishes()
 
@@ -152,10 +142,23 @@ export function TransactionFormDialog({
   // "income" | "expense".
   const categories = useCategories(transactionType === "transfer" ? undefined : transactionType)
   const subcategories = useSubcategories(categoryId || undefined)
-  const questions = useQuestionsForTransactionContext(categoryId || undefined, subcategoryId)
+
+  // Queried separately (not combined into one "transaction context" query)
+  // so picking a different subcategory only ever changes the subcategory
+  // query's key — the category questions stay on their own stable,
+  // cached key and never flash empty while a subcategory-scoped refetch is
+  // in flight. See use-questions.ts for the full story on why this matters.
+  const categoryQuestions = useQuestionsForCategory(categoryId || undefined)
+  const subcategoryQuestions = useQuestionsForSubcategory(subcategoryId || undefined)
+  const allQuestions = React.useMemo(
+    () =>
+      [...(categoryQuestions.data ?? []), ...(subcategoryQuestions.data ?? [])].sort(
+        (a, b) => a.display_order - b.display_order
+      ),
+    [categoryQuestions.data, subcategoryQuestions.data]
+  )
 
   const merchants = useMerchants()
-  const showAttachments = !isTransfer
 
   const sourceWallet = wallets.data?.find((w) => w.id === walletId)
   const destinationWalletOptions = (wallets.data ?? []).filter(
@@ -211,8 +214,6 @@ export function TransactionFormDialog({
           ])
         )
       )
-      const existingTags = (transaction.tags as unknown as ExistingTag[] | null) ?? []
-      setTagIds(existingTags.map((t) => t.id))
 
       // Reconstruct the shop/cart display from the saved snapshot. Amount
       // stays manually-controlled on edit (not re-synced to the cart total)
@@ -246,8 +247,6 @@ export function TransactionFormDialog({
         note: "",
       })
       setAnswers({})
-      setTagIds([])
-      setPendingFiles([])
       setShop(null)
       setDishCart([])
       setAmountManuallyEdited(false)
@@ -261,7 +260,6 @@ export function TransactionFormDialog({
     form.setValue("subcategory_id", "")
     form.setValue("to_wallet_id", "")
     setAnswers({})
-    setPendingFiles([])
     setShop(null)
     setDishCart([])
     setAmountManuallyEdited(false)
@@ -319,12 +317,6 @@ export function TransactionFormDialog({
     setAnswers({})
   }
 
-  function toggleTag(tagId: string) {
-    setTagIds((current) =>
-      current.includes(tagId) ? current.filter((id) => id !== tagId) : [...current, tagId]
-    )
-  }
-
   async function performSave(values: TransactionFormValues) {
     const isTransferSubmit = values.transaction_type === "transfer"
 
@@ -340,10 +332,7 @@ export function TransactionFormDialog({
       note: values.note || null,
       answers: isTransferSubmit
         ? []
-        : (questions.data ?? [])
-            .filter((q) => answers[q.id])
-            .map((q) => ({ question_id: q.id, ...answers[q.id] })),
-      tag_ids: tagIds,
+        : allQuestions.filter((q) => answers[q.id]).map((q) => ({ question_id: q.id, ...answers[q.id] })),
     }
 
     try {
@@ -356,21 +345,6 @@ export function TransactionFormDialog({
         const saved = await createTransaction.mutateAsync(input)
         savedId = saved.id
         toast.success("Transaction recorded")
-      }
-
-      if (pendingFiles.length > 0 && user) {
-        const results = await Promise.allSettled(
-          pendingFiles.map((file) =>
-            uploadAttachment.mutateAsync({ transactionId: savedId, userId: user.id, file })
-          )
-        )
-        const failedCount = results.filter((r) => r.status === "rejected").length
-        if (failedCount > 0) {
-          toast.error(
-            undefined,
-            `Transaction saved, but ${failedCount} photo${failedCount > 1 ? "s" : ""} failed to upload`
-          )
-        }
       }
 
       let ensuredEntries: FoodLogEntry[] = []
@@ -418,9 +392,7 @@ export function TransactionFormDialog({
   }
 
   async function onSubmit(values: TransactionFormValues) {
-    const unanswered = (questions.data ?? []).filter(
-      (q) => q.is_required && !answers[q.id]
-    )
+    const unanswered = allQuestions.filter((q) => q.is_required && !answers[q.id])
     if (unanswered.length > 0) {
       toast.error(`Please answer: ${unanswered.map((q) => q.prompt).join(", ")}`)
       return
@@ -709,27 +681,9 @@ export function TransactionFormDialog({
               )}
             />
 
-            {(tags.data ?? []).length > 0 && (
-              <div className="grid gap-1.5">
-                <Label>Tags</Label>
-                <div className="flex flex-wrap gap-1.5">
-                  {tags.data?.map((tag) => (
-                    <Badge
-                      key={tag.id}
-                      variant={tagIds.includes(tag.id) ? "default" : "outline"}
-                      className={cn("cursor-pointer select-none")}
-                      onClick={() => toggleTag(tag.id)}
-                    >
-                      {tag.name}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {(questions.data ?? []).length > 0 && (
+            {allQuestions.length > 0 && (
               <div className="grid gap-4 border-t pt-4">
-                {questions.data?.map((question) => (
+                {allQuestions.map((question) => (
                   <DynamicQuestionField
                     key={question.id}
                     question={question}
@@ -741,13 +695,6 @@ export function TransactionFormDialog({
                 ))}
               </div>
             )}
-
-            {showAttachments &&
-              (isEditing && transaction ? (
-                <AttachmentGallery transactionId={transaction.id!} />
-              ) : (
-                <AttachmentPicker files={pendingFiles} onChange={setPendingFiles} />
-              ))}
 
             <DialogFooter>
               <Button type="submit" disabled={isSubmitting}>

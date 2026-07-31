@@ -16,12 +16,12 @@ import { toast } from "@/lib/toast"
 
 export function SubcategoryItem({ subcategory }: { subcategory: Subcategory }) {
   const [open, setOpen] = React.useState(false)
-  const questions = useQuestionsForSubcategory(open ? subcategory.id : undefined)
+  const questions = useQuestionsForSubcategory(open ? subcategory.id : undefined, true)
   const deleteSubcategory = useDeleteSubcategory()
 
   async function handleDelete() {
     try {
-      await deleteSubcategory.mutateAsync(subcategory.id)
+      await deleteSubcategory.mutateAsync({ id: subcategory.id, categoryId: subcategory.category_id })
       toast.success("Subcategory removed")
     } catch (error) {
       toast.error(error, "Couldn't remove subcategory")

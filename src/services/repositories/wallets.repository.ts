@@ -1,22 +1,17 @@
 import { supabase } from "@/lib/supabase/client"
-import { unwrap } from "@/lib/supabase/errors"
+import { unwrap, unwrapVoid } from "@/lib/supabase/errors"
 import type { Tables, TablesInsert, Views } from "@/types/database"
 
 export type Wallet = Tables<"wallets">
 export type WalletBalance = Views<"wallet_balances">
 
 type WalletInsert = TablesInsert<"wallets">
-export type WalletCreateInput = Omit<
-  WalletInsert,
-  "id" | "user_id" | "created_at" | "updated_at" | "deleted_at"
->
+export type WalletCreateInput = Omit<WalletInsert, "id" | "user_id" | "created_at" | "updated_at">
 export type WalletUpdateInput = Partial<WalletCreateInput>
 
 export class WalletsRepository {
   async list(): Promise<Wallet[]> {
-    return unwrap(
-      supabase.from("wallets").select("*").is("deleted_at", null).order("display_order")
-    )
+    return unwrap(supabase.from("wallets").select("*").order("display_order"))
   }
 
   async get(id: string): Promise<Wallet> {
@@ -35,21 +30,12 @@ export class WalletsRepository {
     return this.update(id, { is_archived: isArchived })
   }
 
-  async softDelete(id: string): Promise<Wallet> {
-    return unwrap(
-      supabase
-        .from("wallets")
-        .update({ deleted_at: new Date().toISOString() })
-        .eq("id", id)
-        .select()
-        .single()
-    )
+  async delete(id: string): Promise<void> {
+    return unwrapVoid(supabase.from("wallets").delete().eq("id", id))
   }
 
   async listBalances(): Promise<WalletBalance[]> {
-    return unwrap(
-      supabase.from("wallet_balances").select("*").is("deleted_at", null)
-    )
+    return unwrap(supabase.from("wallet_balances").select("*"))
   }
 }
 

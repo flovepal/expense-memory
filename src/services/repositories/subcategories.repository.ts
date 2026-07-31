@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase/client"
-import { unwrap } from "@/lib/supabase/errors"
+import { unwrap, unwrapVoid } from "@/lib/supabase/errors"
 import type { Tables, TablesInsert } from "@/types/database"
 
 export type Subcategory = Tables<"subcategories">
@@ -7,7 +7,7 @@ export type Subcategory = Tables<"subcategories">
 type SubcategoryInsert = TablesInsert<"subcategories">
 export type SubcategoryCreateInput = Omit<
   SubcategoryInsert,
-  "id" | "user_id" | "created_at" | "updated_at" | "deleted_at"
+  "id" | "user_id" | "created_at" | "updated_at"
 >
 export type SubcategoryUpdateInput = Partial<SubcategoryCreateInput>
 
@@ -18,7 +18,6 @@ export class SubcategoriesRepository {
         .from("subcategories")
         .select("*")
         .eq("category_id", categoryId)
-        .is("deleted_at", null)
         .order("display_order")
     )
   }
@@ -33,15 +32,8 @@ export class SubcategoriesRepository {
     )
   }
 
-  async softDelete(id: string): Promise<Subcategory> {
-    return unwrap(
-      supabase
-        .from("subcategories")
-        .update({ deleted_at: new Date().toISOString() })
-        .eq("id", id)
-        .select()
-        .single()
-    )
+  async delete(id: string): Promise<void> {
+    return unwrapVoid(supabase.from("subcategories").delete().eq("id", id))
   }
 }
 

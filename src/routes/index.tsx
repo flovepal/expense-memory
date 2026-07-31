@@ -24,17 +24,6 @@ export const router = createBrowserRouter([
           import("@/features/wallets/wallets-page").then((m) => ({ Component: m.WalletsPage })),
       },
       {
-        path: "categories",
-        lazy: () =>
-          import("@/features/categories/categories-page").then((m) => ({
-            Component: m.CategoriesPage,
-          })),
-      },
-      {
-        path: "tags",
-        lazy: () => import("@/features/tags/tags-page").then((m) => ({ Component: m.TagsPage })),
-      },
-      {
         path: "food-log",
         lazy: () =>
           import("@/features/food-log/food-log-page").then((m) => ({ Component: m.FoodLogPage })),

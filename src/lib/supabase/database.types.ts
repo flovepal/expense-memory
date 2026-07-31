@@ -43,13 +43,11 @@ export type Database = {
         Row: {
           color: string | null
           created_at: string
-          deleted_at: string | null
           display_order: number
           icon: string | null
           id: string
           is_archived: boolean
           name: string
-          suggests_attachment: boolean
           transaction_type: string
           updated_at: string
           user_id: string | null
@@ -57,13 +55,11 @@ export type Database = {
         Insert: {
           color?: string | null
           created_at?: string
-          deleted_at?: string | null
           display_order?: number
           icon?: string | null
           id?: string
           is_archived?: boolean
           name: string
-          suggests_attachment?: boolean
           transaction_type: string
           updated_at?: string
           user_id?: string | null
@@ -71,13 +67,11 @@ export type Database = {
         Update: {
           color?: string | null
           created_at?: string
-          deleted_at?: string | null
           display_order?: number
           icon?: string | null
           id?: string
           is_archived?: boolean
           name?: string
-          suggests_attachment?: boolean
           transaction_type?: string
           updated_at?: string
           user_id?: string | null
@@ -120,7 +114,6 @@ export type Database = {
       dish_categories: {
         Row: {
           created_at: string
-          deleted_at: string | null
           display_order: number
           icon: string | null
           id: string
@@ -130,7 +123,6 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          deleted_at?: string | null
           display_order?: number
           icon?: string | null
           id?: string
@@ -140,7 +132,6 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          deleted_at?: string | null
           display_order?: number
           icon?: string | null
           id?: string
@@ -154,7 +145,6 @@ export type Database = {
         Row: {
           created_at: string
           currency_id: string | null
-          deleted_at: string | null
           dish_category_id: string | null
           id: string
           image_storage_path: string | null
@@ -167,7 +157,6 @@ export type Database = {
         Insert: {
           created_at?: string
           currency_id?: string | null
-          deleted_at?: string | null
           dish_category_id?: string | null
           id?: string
           image_storage_path?: string | null
@@ -180,7 +169,6 @@ export type Database = {
         Update: {
           created_at?: string
           currency_id?: string | null
-          deleted_at?: string | null
           dish_category_id?: string | null
           id?: string
           image_storage_path?: string | null
@@ -218,7 +206,6 @@ export type Database = {
         Row: {
           created_at: string
           currency_id: string | null
-          deleted_at: string | null
           dish_category_id: string | null
           dish_id: string | null
           flavors: string[]
@@ -239,7 +226,6 @@ export type Database = {
         Insert: {
           created_at?: string
           currency_id?: string | null
-          deleted_at?: string | null
           dish_category_id?: string | null
           dish_id?: string | null
           flavors?: string[]
@@ -260,7 +246,6 @@ export type Database = {
         Update: {
           created_at?: string
           currency_id?: string | null
-          deleted_at?: string | null
           dish_category_id?: string | null
           dish_id?: string | null
           flavors?: string[]
@@ -362,7 +347,6 @@ export type Database = {
           answer_type: string
           category_id: string | null
           created_at: string
-          deleted_at: string | null
           display_order: number
           id: string
           is_archived: boolean
@@ -376,7 +360,6 @@ export type Database = {
           answer_type: string
           category_id?: string | null
           created_at?: string
-          deleted_at?: string | null
           display_order?: number
           id?: string
           is_archived?: boolean
@@ -390,7 +373,6 @@ export type Database = {
           answer_type?: string
           category_id?: string | null
           created_at?: string
-          deleted_at?: string | null
           display_order?: number
           id?: string
           is_archived?: boolean
@@ -458,7 +440,6 @@ export type Database = {
       shops: {
         Row: {
           created_at: string
-          deleted_at: string | null
           id: string
           name: string
           updated_at: string
@@ -466,7 +447,6 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          deleted_at?: string | null
           id?: string
           name: string
           updated_at?: string
@@ -474,7 +454,6 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          deleted_at?: string | null
           id?: string
           name?: string
           updated_at?: string
@@ -486,7 +465,6 @@ export type Database = {
         Row: {
           category_id: string
           created_at: string
-          deleted_at: string | null
           display_order: number
           icon: string | null
           id: string
@@ -498,7 +476,6 @@ export type Database = {
         Insert: {
           category_id: string
           created_at?: string
-          deleted_at?: string | null
           display_order?: number
           icon?: string | null
           id?: string
@@ -510,7 +487,6 @@ export type Database = {
         Update: {
           category_id?: string
           created_at?: string
-          deleted_at?: string | null
           display_order?: number
           icon?: string | null
           id?: string
@@ -528,36 +504,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      tags: {
-        Row: {
-          color: string | null
-          created_at: string
-          deleted_at: string | null
-          id: string
-          name: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          color?: string | null
-          created_at?: string
-          deleted_at?: string | null
-          id?: string
-          name: string
-          updated_at?: string
-          user_id?: string
-        }
-        Update: {
-          color?: string | null
-          created_at?: string
-          deleted_at?: string | null
-          id?: string
-          name?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
       }
       transaction_answers: {
         Row: {
@@ -623,54 +569,6 @@ export type Database = {
           },
           {
             foreignKeyName: "transaction_answers_transaction_id_fkey"
-            columns: ["transaction_id"]
-            isOneToOne: false
-            referencedRelation: "transactions_detailed"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      transaction_attachments: {
-        Row: {
-          content_type: string | null
-          file_name: string | null
-          id: string
-          size_bytes: number | null
-          storage_path: string
-          transaction_id: string
-          uploaded_at: string
-          user_id: string
-        }
-        Insert: {
-          content_type?: string | null
-          file_name?: string | null
-          id?: string
-          size_bytes?: number | null
-          storage_path: string
-          transaction_id: string
-          uploaded_at?: string
-          user_id: string
-        }
-        Update: {
-          content_type?: string | null
-          file_name?: string | null
-          id?: string
-          size_bytes?: number | null
-          storage_path?: string
-          transaction_id?: string
-          uploaded_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "transaction_attachments_transaction_id_fkey"
-            columns: ["transaction_id"]
-            isOneToOne: false
-            referencedRelation: "transactions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "transaction_attachments_transaction_id_fkey"
             columns: ["transaction_id"]
             isOneToOne: false
             referencedRelation: "transactions_detailed"
@@ -746,52 +644,11 @@ export type Database = {
           },
         ]
       }
-      transaction_tags: {
-        Row: {
-          created_at: string
-          tag_id: string
-          transaction_id: string
-        }
-        Insert: {
-          created_at?: string
-          tag_id: string
-          transaction_id: string
-        }
-        Update: {
-          created_at?: string
-          tag_id?: string
-          transaction_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "transaction_tags_tag_id_fkey"
-            columns: ["tag_id"]
-            isOneToOne: false
-            referencedRelation: "tags"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "transaction_tags_transaction_id_fkey"
-            columns: ["transaction_id"]
-            isOneToOne: false
-            referencedRelation: "transactions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "transaction_tags_transaction_id_fkey"
-            columns: ["transaction_id"]
-            isOneToOne: false
-            referencedRelation: "transactions_detailed"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       transactions: {
         Row: {
           amount: number
           category_id: string | null
           created_at: string
-          deleted_at: string | null
           id: string
           merchant: string | null
           note: string | null
@@ -807,7 +664,6 @@ export type Database = {
           amount: number
           category_id?: string | null
           created_at?: string
-          deleted_at?: string | null
           id?: string
           merchant?: string | null
           note?: string | null
@@ -823,7 +679,6 @@ export type Database = {
           amount?: number
           category_id?: string | null
           created_at?: string
-          deleted_at?: string | null
           id?: string
           merchant?: string | null
           note?: string | null
@@ -899,7 +754,6 @@ export type Database = {
           color: string | null
           created_at: string
           currency_id: string
-          deleted_at: string | null
           display_order: number
           icon: string | null
           id: string
@@ -914,7 +768,6 @@ export type Database = {
           color?: string | null
           created_at?: string
           currency_id: string
-          deleted_at?: string | null
           display_order?: number
           icon?: string | null
           id?: string
@@ -929,7 +782,6 @@ export type Database = {
           color?: string | null
           created_at?: string
           currency_id?: string
-          deleted_at?: string | null
           display_order?: number
           icon?: string | null
           id?: string
@@ -978,7 +830,6 @@ export type Database = {
         Row: {
           amount: number | null
           answers: Json | null
-          attachments: Json | null
           category_color: string | null
           category_icon: string | null
           category_id: string | null
@@ -994,7 +845,6 @@ export type Database = {
           occurred_at: string | null
           subcategory_id: string | null
           subcategory_name: string | null
-          tags: Json | null
           to_wallet_id: string | null
           to_wallet_name: string | null
           transaction_type: string | null
@@ -1076,7 +926,6 @@ export type Database = {
           currency_id: string | null
           currency_symbol: string | null
           current_balance: number | null
-          deleted_at: string | null
           is_archived: boolean | null
           name: string | null
           total_received: number | null
@@ -1116,7 +965,6 @@ export type Database = {
           p_note: string
           p_occurred_at: string
           p_subcategory_id: string
-          p_tag_ids: string[]
           p_to_wallet_id?: string
           p_transaction_type: string
           p_wallet_id: string
@@ -1125,7 +973,6 @@ export type Database = {
           amount: number
           category_id: string | null
           created_at: string
-          deleted_at: string | null
           id: string
           merchant: string | null
           note: string | null
@@ -1153,7 +1000,6 @@ export type Database = {
           p_note: string
           p_occurred_at: string
           p_subcategory_id: string
-          p_tag_ids: string[]
           p_to_wallet_id?: string
           p_transaction_id: string
           p_transaction_type: string
@@ -1163,7 +1009,6 @@ export type Database = {
           amount: number
           category_id: string | null
           created_at: string
-          deleted_at: string | null
           id: string
           merchant: string | null
           note: string | null

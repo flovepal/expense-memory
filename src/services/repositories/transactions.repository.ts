@@ -49,7 +49,6 @@ export type TransactionWriteInput = {
   occurred_at?: string | null
   note?: string | null
   answers?: TransactionAnswerInput[]
-  tag_ids?: string[]
   to_wallet_id?: string | null
   merchant?: string | null
 }
@@ -97,7 +96,6 @@ export class TransactionsRepository {
       p_occurred_at: input.occurred_at ?? null,
       p_note: input.note ?? null,
       p_answers: (input.answers ?? []).map(toAnswerRow),
-      p_tag_ids: input.tag_ids ?? [],
       p_to_wallet_id: input.to_wallet_id ?? null,
       p_merchant: input.merchant ?? null,
     }
@@ -120,7 +118,6 @@ export class TransactionsRepository {
       p_occurred_at: input.occurred_at ?? null,
       p_note: input.note ?? null,
       p_answers: (input.answers ?? []).map(toAnswerRow),
-      p_tag_ids: input.tag_ids ?? [],
       p_to_wallet_id: input.to_wallet_id ?? null,
       p_merchant: input.merchant ?? null,
     }
@@ -132,13 +129,9 @@ export class TransactionsRepository {
     )
   }
 
-  async softDelete(id: string): Promise<void> {
-    return unwrapVoid(
-      supabase
-        .from("transactions")
-        .update({ deleted_at: new Date().toISOString() })
-        .eq("id", id)
-    )
+  /** Also removes this transaction's dish line items via a database trigger (transaction_dish_items has no delete state of its own). */
+  async delete(id: string): Promise<void> {
+    return unwrapVoid(supabase.from("transactions").delete().eq("id", id))
   }
 
   /** Distinct merchant names the user has entered before, for the merchant field's autocomplete. Newly-typed names show up here automatically once the transaction that used them is saved — no separate table to maintain. */

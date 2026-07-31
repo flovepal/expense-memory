@@ -45,10 +45,17 @@ function CategoryListForType({ transactionType }: { transactionType: Transaction
   )
 }
 
-export function CategoriesPage() {
+/** Categories, subcategories, and their custom questions — all editable from one place in Settings rather than a separate nav item. */
+export function CategorySettings() {
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-xl font-semibold">Categories</h1>
+    <div className="flex flex-col gap-4">
+      <div>
+        <h2 className="text-lg font-semibold">Categories</h2>
+        <p className="text-sm text-muted-foreground">
+          Manage categories, subcategories, and the custom questions they ask when you log a
+          transaction.
+        </p>
+      </div>
       <Tabs defaultValue="expense">
         <TabsList>
           <TabsTrigger value="expense">Expenses</TabsTrigger>

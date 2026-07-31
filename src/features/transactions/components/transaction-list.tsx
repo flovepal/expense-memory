@@ -9,7 +9,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   AlertDialog,
@@ -25,15 +24,12 @@ import {
 import { TransactionFormDialog } from "@/features/transactions/components/transaction-form-dialog"
 import { ImageLightbox, type LightboxImage } from "@/features/transactions/components/image-lightbox"
 import { useDeleteTransaction } from "@/features/transactions/hooks/use-transactions"
-import { useAttachmentSignedUrls } from "@/features/transactions/hooks/use-attachments"
 import { useDishImageSignedUrls } from "@/features/dishes/hooks/use-dish-images"
 import { formatCurrency, formatDate } from "@/lib/format"
 import { toast } from "@/lib/toast"
 import { cn } from "@/lib/utils"
 import type { TransactionDetailed } from "@/services/repositories/transactions.repository"
 
-type TransactionAttachmentSummary = { id: string; storage_path: string }
-type TagSummary = { id: string; name: string }
 type DishItemSummary = {
   id: string
   dish_id: string | null
@@ -41,10 +37,6 @@ type DishItemSummary = {
   unit_price: number
   quantity: number
   image_storage_path: string | null
-}
-
-function getAttachments(transaction: TransactionDetailed): TransactionAttachmentSummary[] {
-  return (transaction.attachments as unknown as TransactionAttachmentSummary[] | null) ?? []
 }
 
 function getDishItems(transaction: TransactionDetailed): DishItemSummary[] {
@@ -70,9 +62,6 @@ export function TransactionList({ transactions }: { transactions: TransactionDet
   const deleteTransaction = useDeleteTransaction()
   const [lightbox, setLightbox] = React.useState<{ images: LightboxImage[]; index: number } | null>(null)
 
-  const attachmentPaths = transactions.flatMap((t) => getAttachments(t).map((a) => a.storage_path))
-  const signedUrls = useAttachmentSignedUrls(attachmentPaths)
-
   const dishImagePaths = transactions.flatMap((t) =>
     getDishItems(t)
       .map((d) => d.image_storage_path)
@@ -87,14 +76,6 @@ export function TransactionList({ transactions }: { transactions: TransactionDet
     } catch (error) {
       toast.error(error, "Couldn't delete transaction")
     }
-  }
-
-  function openLightbox(transaction: TransactionDetailed, clickedIndex: number) {
-    const images = getAttachments(transaction).map((a) => ({
-      id: a.id,
-      url: signedUrls.data?.[a.storage_path] ?? "",
-    }))
-    setLightbox({ images, index: clickedIndex })
   }
 
   function openDishLightbox(transaction: TransactionDetailed, clickedIndex: number) {
@@ -145,37 +126,6 @@ export function TransactionList({ transactions }: { transactions: TransactionDet
     )
   }
 
-  function AttachmentThumbnails({ transaction }: { transaction: TransactionDetailed }) {
-    const attachments = getAttachments(transaction)
-    if (attachments.length === 0) return null
-    return (
-      <div className="flex gap-1">
-        {attachments.slice(0, 2).map((a, i) => {
-          const url = signedUrls.data?.[a.storage_path]
-          return url ? (
-            <button
-              key={a.id}
-              type="button"
-              onClick={() => openLightbox(transaction, i)}
-              className="size-8 shrink-0 overflow-hidden rounded"
-            >
-              <img src={url} alt="" className="size-full object-cover" />
-            </button>
-          ) : null
-        })}
-        {attachments.length > 2 && (
-          <button
-            type="button"
-            onClick={() => openLightbox(transaction, 2)}
-            className="flex size-8 shrink-0 items-center justify-center rounded bg-muted text-[10px]"
-          >
-            +{attachments.length - 2}
-          </button>
-        )}
-      </div>
-    )
-  }
-
   function CategoryOrTransfer({ transaction }: { transaction: TransactionDetailed }) {
     if (transaction.transaction_type === "transfer") {
       return (
@@ -218,7 +168,7 @@ export function TransactionList({ transactions }: { transactions: TransactionDet
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Delete this transaction?</AlertDialogTitle>
-              <AlertDialogDescription>This can't be undone from the UI.</AlertDialogDescription>
+              <AlertDialogDescription>This can't be undone.</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -266,20 +216,6 @@ export function TransactionList({ transactions }: { transactions: TransactionDet
             <div className="mt-1">
               <DishItemsSummary transaction={transaction} />
             </div>
-
-            {Array.isArray(transaction.tags) && transaction.tags.length > 0 && (
-              <div className="mt-1.5 flex flex-wrap gap-1">
-                {(transaction.tags as unknown as TagSummary[]).map((tag) => (
-                  <Badge key={tag.id} variant="outline" className="text-[10px]">
-                    {tag.name}
-                  </Badge>
-                ))}
-              </div>
-            )}
-
-            <div className="mt-1.5">
-              <AttachmentThumbnails transaction={transaction} />
-            </div>
           </div>
         ))}
       </div>
@@ -314,16 +250,6 @@ export function TransactionList({ transactions }: { transactions: TransactionDet
                     )}
                     <span className="truncate">{transaction.note || "—"}</span>
                     <DishItemsSummary transaction={transaction} />
-                    {Array.isArray(transaction.tags) && transaction.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {(transaction.tags as unknown as TagSummary[]).map((tag) => (
-                          <Badge key={tag.id} variant="outline" className="text-[10px]">
-                            {tag.name}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                    <AttachmentThumbnails transaction={transaction} />
                   </div>
                 </TableCell>
                 <TableCell className={cn("text-right", amountClassName(transaction.transaction_type ?? ""))}>

@@ -74,7 +74,7 @@ export function useSetWalletArchived() {
 export function useDeleteWallet() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (id: string) => walletsRepository.softDelete(id),
+    mutationFn: (id: string) => walletsRepository.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: walletKeys.lists() })
       queryClient.invalidateQueries({ queryKey: walletKeys.balances() })

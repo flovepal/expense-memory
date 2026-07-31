@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import {
   questionsRepository,
@@ -9,38 +9,43 @@ import {
 
 export const questionKeys = {
   all: ["questions"] as const,
-  forCategory: (categoryId: string) => [...questionKeys.all, "category", categoryId] as const,
-  forSubcategory: (subcategoryId: string) =>
-    [...questionKeys.all, "subcategory", subcategoryId] as const,
-  forTransactionContext: (categoryId: string, subcategoryId?: string | null) =>
-    [...questionKeys.all, "context", categoryId, subcategoryId ?? null] as const,
+  forCategory: (categoryId: string, includeArchived = false) =>
+    [...questionKeys.all, "category", categoryId, includeArchived] as const,
+  forSubcategory: (subcategoryId: string, includeArchived = false) =>
+    [...questionKeys.all, "subcategory", subcategoryId, includeArchived] as const,
 }
 
-export function useQuestionsForCategory(categoryId: string | undefined) {
+/**
+ * includeArchived: true in the management view (Settings) so archived
+ * questions stay visible with a restore option.
+ *
+ * keepPreviousData matters here specifically for the transaction form: it's
+ * called separately for category and subcategory (not merged into one
+ * combined query), so picking a different subcategory only ever changes
+ * *this* query's key, not the category one — and even so, without
+ * keepPreviousData the fields would briefly vanish and reappear on every
+ * subcategory change while the new key's data loads. That flash was the
+ * root cause of the "screen jumps" bug reported against the Food
+ * transaction flow.
+ */
+export function useQuestionsForCategory(categoryId: string | undefined, includeArchived = false) {
   return useQuery({
-    queryKey: questionKeys.forCategory(categoryId ?? ""),
-    queryFn: () => questionsRepository.listForCategory(categoryId!),
+    queryKey: questionKeys.forCategory(categoryId ?? "", includeArchived),
+    queryFn: () => questionsRepository.listForCategory(categoryId!, includeArchived),
     enabled: !!categoryId,
+    placeholderData: keepPreviousData,
   })
 }
 
-export function useQuestionsForSubcategory(subcategoryId: string | undefined) {
-  return useQuery({
-    queryKey: questionKeys.forSubcategory(subcategoryId ?? ""),
-    queryFn: () => questionsRepository.listForSubcategory(subcategoryId!),
-    enabled: !!subcategoryId,
-  })
-}
-
-/** Combined category + subcategory questions for the transaction form. */
-export function useQuestionsForTransactionContext(
-  categoryId: string | undefined,
-  subcategoryId?: string | null
+export function useQuestionsForSubcategory(
+  subcategoryId: string | undefined,
+  includeArchived = false
 ) {
   return useQuery({
-    queryKey: questionKeys.forTransactionContext(categoryId ?? "", subcategoryId),
-    queryFn: () => questionsRepository.listForTransactionContext(categoryId!, subcategoryId),
-    enabled: !!categoryId,
+    queryKey: questionKeys.forSubcategory(subcategoryId ?? "", includeArchived),
+    queryFn: () => questionsRepository.listForSubcategory(subcategoryId!, includeArchived),
+    enabled: !!subcategoryId,
+    placeholderData: keepPreviousData,
   })
 }
 
@@ -49,12 +54,10 @@ function invalidateQuestionScope(
   scope: { category_id: string | null; subcategory_id: string | null }
 ) {
   if (scope.category_id) {
-    queryClient.invalidateQueries({ queryKey: questionKeys.forCategory(scope.category_id) })
+    queryClient.invalidateQueries({ queryKey: ["questions", "category", scope.category_id] })
   }
   if (scope.subcategory_id) {
-    queryClient.invalidateQueries({
-      queryKey: questionKeys.forSubcategory(scope.subcategory_id),
-    })
+    queryClient.invalidateQueries({ queryKey: ["questions", "subcategory", scope.subcategory_id] })
   }
   queryClient.invalidateQueries({ queryKey: questionKeys.all })
 }
@@ -76,11 +79,21 @@ export function useUpdateQuestion() {
   })
 }
 
+export function useSetQuestionArchived() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, isArchived }: { id: string; isArchived: boolean }) =>
+      questionsRepository.setArchived(id, isArchived),
+    onSuccess: (question) => invalidateQuestionScope(queryClient, question),
+  })
+}
+
 export function useDeleteQuestion() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (id: string) => questionsRepository.softDelete(id),
-    onSuccess: (question) => invalidateQuestionScope(queryClient, question),
+    mutationFn: ({ id }: { id: string; category_id: string | null; subcategory_id: string | null }) =>
+      questionsRepository.delete(id),
+    onSuccess: (_data, question) => invalidateQuestionScope(queryClient, question),
   })
 }
 

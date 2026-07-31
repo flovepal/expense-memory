@@ -66,7 +66,7 @@ export function useUpdateTransaction() {
 export function useDeleteTransaction() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (id: string) => transactionsRepository.softDelete(id),
+    mutationFn: (id: string) => transactionsRepository.delete(id),
     onSuccess: () => invalidateTransactionEffects(queryClient),
   })
 }

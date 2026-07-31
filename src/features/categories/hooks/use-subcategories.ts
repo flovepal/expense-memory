@@ -45,10 +45,11 @@ export function useUpdateSubcategory() {
 export function useDeleteSubcategory() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (id: string) => subcategoriesRepository.softDelete(id),
-    onSuccess: (subcategory) =>
+    mutationFn: ({ id }: { id: string; categoryId: string }) =>
+      subcategoriesRepository.delete(id),
+    onSuccess: (_data, { categoryId }) =>
       queryClient.invalidateQueries({
-        queryKey: subcategoryKeys.byCategory(subcategory.category_id),
+        queryKey: subcategoryKeys.byCategory(categoryId),
       }),
   })
 }

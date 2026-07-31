@@ -41,7 +41,7 @@ export function useUpdateCategory() {
 export function useDeleteCategory() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (id: string) => categoriesRepository.softDelete(id),
+    mutationFn: (id: string) => categoriesRepository.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: categoryKeys.lists() }),
   })
 }

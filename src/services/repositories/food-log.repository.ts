@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase/client"
-import { unwrap } from "@/lib/supabase/errors"
+import { unwrap, unwrapVoid } from "@/lib/supabase/errors"
 import type { Tables, TablesInsert } from "@/types/database"
 
 export type FoodLogEntry = Tables<"food_log_entries">
@@ -7,7 +7,7 @@ export type FoodLogEntry = Tables<"food_log_entries">
 type FoodLogEntryInsert = TablesInsert<"food_log_entries">
 export type FoodLogEntryCreateInput = Omit<
   FoodLogEntryInsert,
-  "id" | "user_id" | "created_at" | "updated_at" | "deleted_at"
+  "id" | "user_id" | "created_at" | "updated_at"
 >
 export type FoodLogEntryUpdateInput = Partial<FoodLogEntryCreateInput>
 
@@ -30,7 +30,7 @@ export type EnsureFoodLogEntryInput = {
 export class FoodLogRepository {
   /** For browsing "what to eat where" — filter by shop or dish category. */
   async list(filters: FoodLogEntryFilters = {}): Promise<FoodLogEntry[]> {
-    let query = supabase.from("food_log_entries").select("*").is("deleted_at", null)
+    let query = supabase.from("food_log_entries").select("*")
     if (filters.shop) query = query.eq("shop", filters.shop)
     if (filters.dishCategoryId) query = query.eq("dish_category_id", filters.dishCategoryId)
     return unwrap(
@@ -54,20 +54,13 @@ export class FoodLogRepository {
     return unwrap(supabase.from("food_log_entries").update(input).eq("id", id).select().single())
   }
 
-  async softDelete(id: string): Promise<FoodLogEntry> {
-    return unwrap(
-      supabase
-        .from("food_log_entries")
-        .update({ deleted_at: new Date().toISOString() })
-        .eq("id", id)
-        .select()
-        .single()
-    )
+  async delete(id: string): Promise<void> {
+    return unwrapVoid(supabase.from("food_log_entries").delete().eq("id", id))
   }
 
   async getByDishId(dishId: string): Promise<FoodLogEntry | null> {
     const rows = await unwrap<FoodLogEntry[]>(
-      supabase.from("food_log_entries").select("*").eq("dish_id", dishId).is("deleted_at", null).limit(1)
+      supabase.from("food_log_entries").select("*").eq("dish_id", dishId).limit(1)
     )
     return rows[0] ?? null
   }
